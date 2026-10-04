@@ -1,0 +1,6 @@
+{
+  "name": "Makas & Jilet - Berber Yönetim ve Randevu Sistemi",
+  "description": "Berber ve kuaförler için çalışan yönetimi, müşteri kayıtları, online randevu alma ve iPhone/Android anlık yönetici bildirim sistemi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

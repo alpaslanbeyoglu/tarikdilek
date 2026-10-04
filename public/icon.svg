@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="50%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bgGrad)" />
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#goldGrad)" stroke-width="8" opacity="0.3" stroke-dasharray="12 8"/>
+  <g transform="translate(100, 100) scale(0.61)">
+    <!-- Barber Pole / Razor / Scissors Motif -->
+    <path d="M120 400 L250 220 M250 220 L380 400" stroke="url(#goldGrad)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="100" cy="420" r="45" stroke="url(#goldGrad)" stroke-width="24" fill="none"/>
+    <circle cx="400" cy="420" r="45" stroke="url(#goldGrad)" stroke-width="24" fill="none"/>
+    <path d="M250 70 L250 240" stroke="#f8fafc" stroke-width="24" stroke-linecap="round"/>
+    <path d="M170 120 L330 120" stroke="url(#goldGrad)" stroke-width="24" stroke-linecap="round"/>
+    <path d="M210 170 L290 170" stroke="url(#goldGrad)" stroke-width="16" stroke-linecap="round"/>
+    <!-- Barber Razor Blade Motif -->
+    <rect x="180" y="270" width="140" height="70" rx="12" fill="url(#goldGrad)"/>
+    <rect x="235" y="285" width="30" height="40" rx="6" fill="#0f172a"/>
+  </g>
+</svg>
