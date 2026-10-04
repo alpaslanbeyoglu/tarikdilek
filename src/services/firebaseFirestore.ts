@@ -1,13 +1,21 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { 
   initializeFirestore,
+  getFirestore,
   collection, 
   doc, 
   getDoc
 } from 'firebase/firestore';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+// Initialize Auth and sign in anonymously for Firestore security context
+export const auth = getAuth(app);
+signInAnonymously(auth).catch((err) => {
+  console.warn('Firebase anonymous auth warning:', err);
+});
 
 const dbId = (firebaseConfig as any).firestoreDatabaseId && (firebaseConfig as any).firestoreDatabaseId !== '(default)'
   ? (firebaseConfig as any).firestoreDatabaseId

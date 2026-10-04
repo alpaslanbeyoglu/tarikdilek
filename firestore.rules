@@ -4,5 +4,25 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if true;
     }
+
+    match /tarik_dilek_appointments/{appointmentId} {
+      allow read, write: if true;
+    }
+
+    match /tarik_dilek_barbers/{barberId} {
+      allow read, write: if true;
+    }
+
+    match /tarik_dilek_customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    match /tarik_dilek_services/{serviceId} {
+      allow read, write: if true;
+    }
+
+    match /tarik_dilek_settings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }

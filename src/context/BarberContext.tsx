@@ -400,6 +400,7 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             });
             setIsOnlineSyncing(true);
             setIsLoading(false);
+            setSyncError(null);
           } catch (err: any) {
             console.error('Error parsing appointments snapshot:', err);
             setSyncError(`Randevular işlenirken hata: ${err?.message || err}`);
