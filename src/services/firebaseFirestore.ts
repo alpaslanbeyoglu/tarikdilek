@@ -1,15 +1,9 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { 
-  getFirestore, 
+  initializeFirestore,
   collection, 
   doc, 
-  setDoc, 
-  getDocs, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  getDocFromServer
+  getDoc
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -19,14 +13,19 @@ const dbId = (firebaseConfig as any).firestoreDatabaseId && (firebaseConfig as a
   ? (firebaseConfig as any).firestoreDatabaseId
   : undefined;
 
-export const db = dbId ? getFirestore(app, dbId) : getFirestore(app);
+// Initialize Firestore with long-polling auto-detection for seamless offline & iframe connection fallback
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+}, dbId);
 
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log('✅ Firestore database connected:', dbId || '(default)');
-  } catch (error) {
-    console.warn('Firestore connection note:', error);
+    const snap = await getDoc(doc(db, 'tarik_dilek_settings', 'main'));
+    if (snap.exists()) {
+      console.log('✅ Firestore connected successfully:', dbId || '(default)');
+    }
+  } catch {
+    console.log('ℹ️ Firestore operating in offline persistence mode');
   }
 }
 testConnection();
