@@ -93,6 +93,11 @@ interface BarberContextType {
   triggerTestPushNotification: () => Promise<void>;
   refreshAppointments: () => Promise<boolean>;
   resetToDefaultData: () => void;
+  // Sync & Loading State
+  isLoading: boolean;
+  isOnlineSyncing: boolean;
+  syncError: string | null;
+  clearSyncError: () => void;
 }
 
 const BarberContext = createContext<BarberContextType | undefined>(undefined);
@@ -259,6 +264,15 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const currentUserRole: UserRole = currentUser?.role || null;
   const loggedInBarberId: string | null = currentUser?.barberId || null;
 
+  // Loading & Sync Debugging States
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isOnlineSyncing, setIsOnlineSyncing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const clearSyncError = useCallback(() => {
+    setSyncError(null);
+  }, []);
+
   // Persist session
   useEffect(() => {
     if (currentUser) {
@@ -363,84 +377,181 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSelectedBarberFilter('all');
   }, []);
 
-  // Real-time Firestore sync across devices for all entities
+  // Real-time Firestore sync across devices for all entities with try-catch and debug indicators
   useEffect(() => {
-    // 1. Appointments
-    const unsubApts = onSnapshot(appointmentsCol, (snapshot) => {
-      const cloudApts: Appointment[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data() as Appointment;
-        if (data && data.id) cloudApts.push(data);
-      });
-      setAppointments((prev) => {
-        const map = new Map<string, Appointment>();
-        // Keep local state in case write hasn't propagated yet
-        prev.forEach((a) => map.set(a.id, a));
-        // Merge cloud snapshot
-        cloudApts.forEach((a) => map.set(a.id, a));
-        return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      });
-    }, (err) => console.log('Firestore appointments sync error:', err));
+    let unsubs: Array<() => void> = [];
 
-    // 2. Barbers
-    const unsubBarbers = onSnapshot(barbersCol, (snapshot) => {
-      const cloudBarbers: Barber[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data() as Barber;
-        if (data && data.id) cloudBarbers.push(data);
-      });
-      if (cloudBarbers.length > 0) {
-        setBarbers(cloudBarbers);
-      } else {
-        // Seed initial barber (Tarık Dilek) to cloud
-        INITIAL_BARBERS.forEach((b) => {
-          setDoc(doc(db, 'tarik_dilek_barbers', b.id), cleanFirestoreData(b)).catch(console.error);
-        });
-      }
-    }, (err) => console.warn('Firestore barbers sync error:', err));
+    try {
+      // 1. Appointments
+      const unsubApts = onSnapshot(
+        appointmentsCol,
+        (snapshot) => {
+          try {
+            const cloudApts: Appointment[] = [];
+            snapshot.forEach((d) => {
+              const data = d.data() as Appointment;
+              if (data && data.id) cloudApts.push(data);
+            });
+            setAppointments((prev) => {
+              const map = new Map<string, Appointment>();
+              prev.forEach((a) => map.set(a.id, a));
+              cloudApts.forEach((a) => map.set(a.id, a));
+              return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+            });
+            setIsOnlineSyncing(true);
+            setIsLoading(false);
+          } catch (err: any) {
+            console.error('Error parsing appointments snapshot:', err);
+            setSyncError(`Randevular işlenirken hata: ${err?.message || err}`);
+            setIsLoading(false);
+          }
+        },
+        (err) => {
+          console.error('Firestore appointments sync error:', err);
+          setSyncError(`Randevu senkronizasyon hatası: ${err?.message || 'Bağlantı hatası'}`);
+          setIsLoading(false);
+        }
+      );
+      unsubs.push(unsubApts);
 
-    // 3. Customers
-    const unsubCustomers = onSnapshot(customersCol, (snapshot) => {
-      const cloudCustomers: Customer[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data() as Customer;
-        if (data && data.id) cloudCustomers.push(data);
-      });
-      setCustomers(cloudCustomers);
-    }, (err) => console.warn('Firestore customers sync error:', err));
+      // 2. Barbers
+      const unsubBarbers = onSnapshot(
+        barbersCol,
+        (snapshot) => {
+          try {
+            const cloudBarbers: Barber[] = [];
+            snapshot.forEach((d) => {
+              const data = d.data() as Barber;
+              if (data && data.id) cloudBarbers.push(data);
+            });
+            if (cloudBarbers.length > 0) {
+              setBarbers(cloudBarbers);
+            } else {
+              INITIAL_BARBERS.forEach((b) => {
+                setDoc(doc(db, 'tarik_dilek_barbers', b.id), cleanFirestoreData(b)).catch((e) =>
+                  console.error('Seed barber error:', e)
+                );
+              });
+            }
+            setIsOnlineSyncing(true);
+            setIsLoading(false);
+          } catch (err: any) {
+            console.error('Error parsing barbers snapshot:', err);
+            setSyncError(`Personel verisi işlenirken hata: ${err?.message || err}`);
+            setIsLoading(false);
+          }
+        },
+        (err) => {
+          console.warn('Firestore barbers sync error:', err);
+          setSyncError(`Personel senkronizasyon hatası: ${err?.message || 'Bağlantı hatası'}`);
+          setIsLoading(false);
+        }
+      );
+      unsubs.push(unsubBarbers);
 
-    // 4. Services
-    const unsubServices = onSnapshot(servicesCol, (snapshot) => {
-      const cloudServices: Service[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data() as Service;
-        if (data && data.id) cloudServices.push(data);
-      });
-      if (cloudServices.length > 0) {
-        setServices(cloudServices);
-      } else {
-        // Seed initial services to cloud
-        INITIAL_SERVICES.forEach((s) => {
-          setDoc(doc(db, 'tarik_dilek_services', s.id), cleanFirestoreData(s)).catch(console.error);
-        });
-      }
-    }, (err) => console.warn('Firestore services sync error:', err));
+      // 3. Customers
+      const unsubCustomers = onSnapshot(
+        customersCol,
+        (snapshot) => {
+          try {
+            const cloudCustomers: Customer[] = [];
+            snapshot.forEach((d) => {
+              const data = d.data() as Customer;
+              if (data && data.id) cloudCustomers.push(data);
+            });
+            setCustomers(cloudCustomers);
+            setIsOnlineSyncing(true);
+            setIsLoading(false);
+          } catch (err: any) {
+            console.error('Error parsing customers snapshot:', err);
+            setSyncError(`Müşteriler işlenirken hata: ${err?.message || err}`);
+            setIsLoading(false);
+          }
+        },
+        (err) => {
+          console.warn('Firestore customers sync error:', err);
+          setSyncError(`Müşteri senkronizasyon hatası: ${err?.message || 'Bağlantı hatası'}`);
+          setIsLoading(false);
+        }
+      );
+      unsubs.push(unsubCustomers);
 
-    // 5. Settings
-    const unsubSettings = onSnapshot(settingsDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as BusinessSettings;
-        setSettings((prev) => ({ ...prev, ...data }));
-      }
-    }, (err) => console.log('Firestore settings sync error:', err));
+      // 4. Services
+      const unsubServices = onSnapshot(
+        servicesCol,
+        (snapshot) => {
+          try {
+            const cloudServices: Service[] = [];
+            snapshot.forEach((d) => {
+              const data = d.data() as Service;
+              if (data && data.id) cloudServices.push(data);
+            });
+            if (cloudServices.length > 0) {
+              setServices(cloudServices);
+            } else {
+              INITIAL_SERVICES.forEach((s) => {
+                setDoc(doc(db, 'tarik_dilek_services', s.id), cleanFirestoreData(s)).catch((e) =>
+                  console.error('Seed service error:', e)
+                );
+              });
+            }
+            setIsOnlineSyncing(true);
+            setIsLoading(false);
+          } catch (err: any) {
+            console.error('Error parsing services snapshot:', err);
+            setSyncError(`Hizmetler işlenirken hata: ${err?.message || err}`);
+            setIsLoading(false);
+          }
+        },
+        (err) => {
+          console.warn('Firestore services sync error:', err);
+          setSyncError(`Hizmet senkronizasyon hatası: ${err?.message || 'Bağlantı hatası'}`);
+          setIsLoading(false);
+        }
+      );
+      unsubs.push(unsubServices);
 
-    return () => {
-      unsubApts();
-      unsubBarbers();
-      unsubCustomers();
-      unsubServices();
-      unsubSettings();
-    };
+      // 5. Settings
+      const unsubSettings = onSnapshot(
+        settingsDocRef,
+        (docSnap) => {
+          try {
+            if (docSnap.exists()) {
+              const data = docSnap.data() as BusinessSettings;
+              setSettings((prev) => ({ ...prev, ...data }));
+            }
+            setIsOnlineSyncing(true);
+            setIsLoading(false);
+          } catch (err: any) {
+            console.error('Error parsing settings snapshot:', err);
+            setSyncError(`Ayarlar işlenirken hata: ${err?.message || err}`);
+            setIsLoading(false);
+          }
+        },
+        (err) => {
+          console.log('Firestore settings sync error:', err);
+          setSyncError(`Ayar senkronizasyon hatası: ${err?.message || 'Bağlantı hatası'}`);
+          setIsLoading(false);
+        }
+      );
+      unsubs.push(unsubSettings);
+
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false);
+      }, 3500);
+
+      return () => {
+        clearTimeout(timeoutId);
+        unsubs.forEach((unsub) => unsub());
+      };
+    } catch (setupErr: any) {
+      console.error('Failed to attach Firestore listeners:', setupErr);
+      setSyncError(`Firestore dinleyici hatası: ${setupErr?.message || setupErr}`);
+      setIsLoading(false);
+      return () => {
+        unsubs.forEach((unsub) => unsub());
+      };
+    }
   }, []);
 
   // Manual cloud refresh function across all entities
@@ -901,6 +1012,10 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       triggerTestPushNotification,
       refreshAppointments,
       resetToDefaultData,
+      isLoading,
+      isOnlineSyncing,
+      syncError,
+      clearSyncError,
     }),
     [
       barbers,
@@ -941,6 +1056,10 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       triggerTestPushNotification,
       refreshAppointments,
       resetToDefaultData,
+      isLoading,
+      isOnlineSyncing,
+      syncError,
+      clearSyncError,
     ]
   );
 

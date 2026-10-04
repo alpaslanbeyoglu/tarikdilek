@@ -38,7 +38,7 @@ interface CustomerLandingPageProps {
 export type CustomerTabType = 'booking' | 'services' | 'team' | 'gallery' | 'guide' | 'contact';
 
 export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpenManager }) => {
-  const { settings, services, barbers, setActiveMode } = useBarber();
+  const { settings, services, barbers, setActiveMode, syncError, clearSyncError } = useBarber();
   const [activeTab, setActiveTab] = useState<CustomerTabType>('booking');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -181,6 +181,22 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
             </button>
           </div>
         </div>
+
+        {/* Sync Error Debug Banner */}
+        {syncError && (
+          <div className="bg-rose-500/10 border-t border-b border-rose-500/30 px-4 py-2 text-xs text-rose-300 flex items-center justify-between gap-2 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{syncError}</span>
+            </div>
+            <button
+              onClick={clearSyncError}
+              className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold"
+            >
+              Kapat
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Main Tabbed Content */}
