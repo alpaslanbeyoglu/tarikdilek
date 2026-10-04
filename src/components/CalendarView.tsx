@@ -52,10 +52,23 @@ export const CalendarView: React.FC = () => {
   const [viewType, setViewType] = useState<'list' | 'timeline'>('list');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
   const [initialSlotForNew, setInitialSlotForNew] = useState<{
     barberId?: string;
     time?: string;
   }>({});
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    setSyncSuccess(false);
+    const ok = await refreshAppointments();
+    setIsSyncing(false);
+    if (ok) {
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 2500);
+    }
+  };
 
   // Effective Barber Filter
   const effectiveBarberFilter = isStaff ? (loggedInBarberId as string) : selectedBarberFilter;
@@ -256,12 +269,19 @@ export const CalendarView: React.FC = () => {
             </div>
 
             <button
-              onClick={() => refreshAppointments()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 shrink-0"
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 ${
+                syncSuccess
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
               title="Buluttan Eşitle & Yenile"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden md:inline">Eşitle</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-400' : syncSuccess ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <span className="hidden sm:inline">
+                {isSyncing ? 'Eşitleniyor...' : syncSuccess ? 'Eşitlendi ✓' : 'Bulut Eşitle'}
+              </span>
             </button>
 
             <button

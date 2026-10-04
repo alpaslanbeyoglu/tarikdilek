@@ -35,7 +35,7 @@ function MainApp() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-        .register('/sw.js')
+        .register('./sw.js')
         .then((reg) => {
           console.log('Barbershop Service Worker registered:', reg.scope);
         })

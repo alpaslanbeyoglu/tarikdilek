@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useBarber } from '../context/BarberContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import {
@@ -14,6 +14,7 @@ import {
   Layers,
   TrendingUp,
   Settings,
+  RefreshCw,
 } from 'lucide-react';
 
 export type ManagerTabType = 'calendar' | 'barbers' | 'services' | 'customers' | 'reports' | 'settings';
@@ -39,7 +40,22 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentUser,
     currentUserRole,
     logout,
+    refreshAppointments,
   } = useBarber();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+
+  const handleNavbarSync = async () => {
+    setIsSyncing(true);
+    setSyncSuccess(false);
+    const ok = await refreshAppointments();
+    setIsSyncing(false);
+    if (ok) {
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 2500);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const isStaff = currentUserRole === 'staff';
@@ -196,6 +212,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
+          </button>
+
+          {/* Cloud Sync Button */}
+          <button
+            onClick={handleNavbarSync}
+            disabled={isSyncing}
+            className={`p-2 rounded-xl transition-colors relative border ${
+              syncSuccess
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800 border-slate-800'
+            }`}
+            title="Buluttan Tüm Cihazları Eşitle & Yenile"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-amber-400' : syncSuccess ? 'text-emerald-400' : ''}`} />
           </button>
 
           {/* Logout Button */}

@@ -1,12 +1,12 @@
 // Service Worker for Makas & Jilet Barbershop
-const CACHE_NAME = 'barber-pwa-v1';
+const CACHE_NAME = 'barber-pwa-v2';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.svg',
+  './pwa-192x192.png',
+  './pwa-512x512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,10 +37,10 @@ self.addEventListener('push', (event) => {
   let data = {
     title: 'Yeni Müşteri Randevusu!',
     body: 'Bir müşteri online randevu aldı. İncelemek için tıklayın.',
-    icon: '/pwa-192x192.png',
-    badge: '/icon.svg',
+    icon: './pwa-192x192.png',
+    badge: './icon.svg',
     tag: 'barber-appointment-' + Date.now(),
-    url: '/'
+    url: './'
   };
 
   if (event.data) {
@@ -54,11 +54,11 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/pwa-192x192.png',
-    badge: '/icon.svg',
+    icon: data.icon || './pwa-192x192.png',
+    badge: './icon.svg',
     vibrate: [200, 100, 200, 100, 200],
     data: {
-      url: data.url || '/',
+      url: data.url || './',
       appointmentId: data.appointmentId
     },
     actions: [

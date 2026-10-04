@@ -21,7 +21,7 @@ import {
   sendInstantNotification,
   playNotificationSound,
 } from '../services/notificationService';
-import { doc, setDoc, deleteDoc, onSnapshot, getDocs, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db, appointmentsCol, barbersCol, customersCol, servicesCol, settingsDocRef } from '../services/firebaseFirestore';
 
 function cleanFirestoreData(obj: any): any {
@@ -91,7 +91,7 @@ interface BarberContextType {
   markAllNotificationsAsRead: () => void;
   clearAllNotifications: () => void;
   triggerTestPushNotification: () => Promise<void>;
-  refreshAppointments: () => Promise<void>;
+  refreshAppointments: () => Promise<boolean>;
   resetToDefaultData: () => void;
 }
 
@@ -436,25 +436,62 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  // Manual cloud refresh function
-  const refreshAppointments = useCallback(async () => {
+  // Manual cloud refresh function across all entities
+  const refreshAppointments = useCallback(async (): Promise<boolean> => {
     try {
-      const snapshot = await getDocs(appointmentsCol);
+      // 1. Appointments
+      const aptsSnap = await getDocs(appointmentsCol);
       const cloudApts: Appointment[] = [];
-      snapshot.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
+      aptsSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
         const data = d.data() as Appointment;
         if (data && data.id) cloudApts.push(data);
       });
       if (cloudApts.length > 0) {
-        setAppointments((prev) => {
-          const map = new Map<string, Appointment>();
-          prev.forEach((a) => map.set(a.id, a));
-          cloudApts.forEach((a) => map.set(a.id, a));
-          return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        });
+        setAppointments(cloudApts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       }
+
+      // 2. Barbers
+      const barbersSnap = await getDocs(barbersCol);
+      const cloudBarbers: Barber[] = [];
+      barbersSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
+        const data = d.data() as Barber;
+        if (data && data.id) cloudBarbers.push(data);
+      });
+      if (cloudBarbers.length > 0) {
+        setBarbers(cloudBarbers);
+      }
+
+      // 3. Customers
+      const custSnap = await getDocs(customersCol);
+      const cloudCust: Customer[] = [];
+      custSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
+        const data = d.data() as Customer;
+        if (data && data.id) cloudCust.push(data);
+      });
+      setCustomers(cloudCust);
+
+      // 4. Services
+      const servicesSnap = await getDocs(servicesCol);
+      const cloudServices: Service[] = [];
+      servicesSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
+        const data = d.data() as Service;
+        if (data && data.id) cloudServices.push(data);
+      });
+      if (cloudServices.length > 0) {
+        setServices(cloudServices);
+      }
+
+      // 5. Settings
+      const settingsSnap = await getDoc(settingsDocRef);
+      if (settingsSnap.exists()) {
+        const data = settingsSnap.data() as BusinessSettings;
+        setSettings((prev) => ({ ...prev, ...data }));
+      }
+
+      return true;
     } catch (e) {
-      console.warn('Manual refresh failed:', e);
+      console.warn('Manual cloud refresh failed:', e);
+      return false;
     }
   }, []);
 
