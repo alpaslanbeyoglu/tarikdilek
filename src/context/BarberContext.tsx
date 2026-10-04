@@ -23,6 +23,7 @@ import {
 } from '../services/notificationService';
 import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db, appointmentsCol, barbersCol, customersCol, servicesCol, settingsDocRef } from '../services/firebaseFirestore';
+import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
 
 function cleanFirestoreData(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
@@ -249,7 +250,7 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
+    return formatLocalDateToISO(new Date());
   });
 
   const [selectedBarberFilter, setSelectedBarberFilter] = useState<string>(() => {
@@ -295,34 +296,8 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('barber_customers', JSON.stringify(customers));
   }, [customers]);
 
-  // BroadcastChannel for cross-tab / cross-browser sync on the same device
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.BroadcastChannel) return;
-    const channel = new BroadcastChannel('tarik_dilek_sync_channel');
-    channel.onmessage = (event) => {
-      if (event.data && event.data.type === 'APPOINTMENTS_UPDATED') {
-        if (Array.isArray(event.data.appointments)) {
-          setAppointments(event.data.appointments);
-        }
-      }
-    };
-    return () => channel.close();
-  }, []);
-
-  const broadcastAppointments = (updatedApts: Appointment[]) => {
-    if (typeof window === 'undefined' || !window.BroadcastChannel) return;
-    try {
-      const channel = new BroadcastChannel('tarik_dilek_sync_channel');
-      channel.postMessage({ type: 'APPOINTMENTS_UPDATED', appointments: updatedApts });
-      channel.close();
-    } catch {
-      // ignore
-    }
-  };
-
   useEffect(() => {
     localStorage.setItem('barber_appointments', JSON.stringify(appointments));
-    broadcastAppointments(appointments);
   }, [appointments]);
 
   useEffect(() => {
@@ -620,7 +595,7 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const barber = barbers.find((b) => b.id === barberId);
       if (!barber || !barber.active) return [];
 
-      const targetDate = new Date(date + 'T00:00:00');
+      const targetDate = parseISODateToLocal(date);
       const dayOfWeek = targetDate.getDay();
       if (barber.daysOff.includes(dayOfWeek)) {
         return [];

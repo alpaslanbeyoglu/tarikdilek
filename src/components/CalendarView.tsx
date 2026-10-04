@@ -27,6 +27,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { buildCustomerConfirmationWhatsAppUrl } from '../services/notificationService';
+import { formatISODateToTurkish, formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
 
 export const CalendarView: React.FC = () => {
   const {
@@ -174,13 +175,7 @@ export const CalendarView: React.FC = () => {
 
   // Helper to format date for display
   const formattedDateTitle = useMemo(() => {
-    const dateObj = new Date(selectedDate + 'T00:00:00');
-    return dateObj.toLocaleDateString('tr-TR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    return formatISODateToTurkish(selectedDate);
   }, [selectedDate]);
 
   const handleSlotClick = (barberId: string, time: string) => {

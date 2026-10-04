@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { buildManagerWhatsAppUrl, buildCustomerWhatsAppUrl } from '../services/notificationService';
 import { ShopLocationBadge } from './ShopLocationBadge';
+import { formatLocalDateToISO } from '../utils/dateHelper';
 
 export const CustomerBookingPortal: React.FC = () => {
   const {
@@ -78,7 +79,7 @@ export const CustomerBookingPortal: React.FC = () => {
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(['s3']); // Default Saç & Sakal
   const [selectedBarberId, setSelectedBarberId] = useState<string>('b1');
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
+    return formatLocalDateToISO(new Date());
   });
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [customerName, setCustomerName] = useState<string>('');
@@ -128,9 +129,8 @@ export const CustomerBookingPortal: React.FC = () => {
     const list = [];
     const today = new Date();
     for (let i = 0; i < 10; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const iso = d.toISOString().split('T')[0];
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const iso = formatLocalDateToISO(d);
       const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
       const monthNames = [
         'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',

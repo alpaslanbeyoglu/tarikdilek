@@ -16,12 +16,14 @@ import {
   Banknote,
 } from 'lucide-react';
 
+import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
+
 export const ReportsView: React.FC = () => {
   const { appointments, barbers, services, settings } = useBarber();
 
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatLocalDateToISO(new Date());
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter((apt) => {
@@ -30,7 +32,7 @@ export const ReportsView: React.FC = () => {
       }
       if (dateFilter === 'week') {
         const today = new Date();
-        const aptDate = new Date(apt.date);
+        const aptDate = parseISODateToLocal(apt.date);
         const diffDays = (today.getTime() - aptDate.getTime()) / (1000 * 3600 * 24);
         return diffDays >= -1 && diffDays <= 7;
       }
