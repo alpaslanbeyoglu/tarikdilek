@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { getAssetUrl } from '../utils/assetHelper';
 import { useBarber } from '../context/BarberContext';
 import { Barber } from '../types';
 import {
@@ -28,9 +29,9 @@ import {
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
-  '/images/barber_master_ahmet_1791041628892.jpg',
-  '/images/barber_stylist_serkan_1791041638829.jpg',
-  '/images/barber_fade_can_1791041648901.jpg',
+  './images/barber_master_ahmet_1791041628892.jpg',
+  './images/barber_stylist_serkan_1791041638829.jpg',
+  './images/barber_fade_can_1791041648901.jpg',
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
@@ -326,7 +327,7 @@ export const BarbersView: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="relative group/avatar cursor-pointer" onClick={() => openEditModal(barber)}>
                       <img
-                        src={barber.avatar}
+                        src={getAssetUrl(barber.avatar)}
                         alt={barber.name}
                         referrerPolicy="no-referrer"
                         className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-500/30 group-hover/avatar:border-amber-500 transition-colors"

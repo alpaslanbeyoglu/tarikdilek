@@ -1,4 +1,5 @@
 import React from 'react';
+import { getAssetUrl } from '../utils/assetHelper';
 import {
   Scissors,
   Award,
@@ -29,7 +30,7 @@ export const AboutSalon: React.FC = () => {
           <div className="relative">
             <div className="relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
               <img
-                src="/images/barbershop_hero_atmosphere_1791041617667.jpg"
+                src={getAssetUrl('/images/barbershop_hero_atmosphere_1791041617667.jpg')}
                 alt="Tarık Dilek Göktürk Salonu"
                 referrerPolicy="no-referrer"
                 className="w-full h-[420px] object-cover"
@@ -40,7 +41,7 @@ export const AboutSalon: React.FC = () => {
               <div className="absolute bottom-5 left-5 right-5 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
-                    src="/images/barber_master_ahmet_1791041628892.jpg"
+                    src={getAssetUrl('/images/barber_master_ahmet_1791041628892.jpg')}
                     alt="Tarık Dilek"
                     referrerPolicy="no-referrer"
                     className="w-12 h-12 rounded-xl object-cover border border-amber-500/60"

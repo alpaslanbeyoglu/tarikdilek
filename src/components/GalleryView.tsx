@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAssetUrl } from '../utils/assetHelper';
 import {
   Sparkles,
   Scissors,
@@ -217,7 +218,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ onSelectModelForBookin
             {/* Passport-Style Studio Headshot Container */}
             <div className="relative aspect-square bg-[#e2e4e8] overflow-hidden">
               <img
-                src={model.imageUrl}
+                src={getAssetUrl(model.imageUrl)}
                 alt={model.name}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
@@ -340,7 +341,7 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ onSelectModelForBookin
             {/* Passport Headshot Image (Left Side) */}
             <div className="md:w-1/2 bg-[#e2e4e8] flex items-center justify-center relative overflow-hidden">
               <img
-                src={activeModalItem.imageUrl}
+                src={getAssetUrl(activeModalItem.imageUrl)}
                 alt={activeModalItem.name}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover max-h-[50vh] md:max-h-[80vh]"

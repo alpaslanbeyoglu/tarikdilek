@@ -127,7 +127,7 @@ export const INITIAL_BARBERS: Barber[] = [
     name: 'Tarık Dilek',
     title: 'Kurucu & Baş Berber',
     phone: '0531 660 52 30',
-    avatar: '/images/barber_master_ahmet_1791041628892.jpg',
+    avatar: './images/barber_master_ahmet_1791041628892.jpg',
     rating: 5.0,
     experienceYears: 15,
     active: true,

@@ -372,7 +372,14 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const data = d.data() as Appointment;
         if (data && data.id) cloudApts.push(data);
       });
-      setAppointments(cloudApts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setAppointments((prev) => {
+        const map = new Map<string, Appointment>();
+        // Keep local state in case write hasn't propagated yet
+        prev.forEach((a) => map.set(a.id, a));
+        // Merge cloud snapshot
+        cloudApts.forEach((a) => map.set(a.id, a));
+        return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      });
     }, (err) => console.log('Firestore appointments sync error:', err));
 
     // 2. Barbers

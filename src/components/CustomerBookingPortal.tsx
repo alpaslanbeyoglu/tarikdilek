@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getAssetUrl } from '../utils/assetHelper';
 import { useBarber } from '../context/BarberContext';
 import { Service, Barber } from '../types';
 import confetti from 'canvas-confetti';
@@ -220,7 +221,7 @@ export const CustomerBookingPortal: React.FC = () => {
       {/* Hero Atmosphere Banner */}
       <div className="relative h-64 md:h-80 w-full overflow-hidden border-b border-slate-800">
         <img
-          src="/images/barbershop_hero_atmosphere_1791041617667.jpg"
+          src={getAssetUrl('/images/barbershop_hero_atmosphere_1791041617667.jpg')}
           alt="Tarık Dilek Barbershop Atmosferi"
           referrerPolicy="no-referrer"
           className="h-full w-full object-cover object-center"
@@ -521,7 +522,7 @@ export const CustomerBookingPortal: React.FC = () => {
                     <div className="flex items-center gap-3.5">
                       <div className="relative">
                         <img
-                          src={barber.avatar}
+                          src={getAssetUrl(barber.avatar)}
                           alt={barber.name}
                           referrerPolicy="no-referrer"
                           className="w-14 h-14 rounded-2xl object-cover border border-slate-700"
