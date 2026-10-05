@@ -31,12 +31,13 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
-import { Expense, StaffPayout } from '../types';
+import { Appointment, Expense, StaffPayout } from '../types';
 
 export const ReportsView: React.FC = () => {
   const {
     appointments,
     barbers,
+    services,
     updateBarber,
     settings,
     expenses,
@@ -45,7 +46,11 @@ export const ReportsView: React.FC = () => {
     deleteExpense,
     addStaffPayout,
     deleteStaffPayout,
+    currentUserRole,
+    loggedInBarberId,
   } = useBarber();
+
+  const isStaff = currentUserRole === 'staff';
 
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
@@ -119,12 +124,28 @@ export const ReportsView: React.FC = () => {
     });
   }, [staffPayouts, dateFilter, todayStr]);
 
+  // 1. Randevu Ücretini Hesaplama (Yöneticinin belirlediği güncel hizmet tarifesi esas alınır)
+  const getAppointmentAmount = (apt: Appointment): number => {
+    // Randevudaki hizmetlerin yöneticinin belirlediği güncel fiyatları toplamı
+    if (apt.serviceIds && apt.serviceIds.length > 0) {
+      const calculated = apt.serviceIds.reduce((sum: number, sId: string) => {
+        const s = services.find((item) => item.id === sId);
+        return sum + (s?.price || 0);
+      }, 0);
+      if (calculated > 0) return calculated;
+    }
+    if (typeof apt.totalPrice === 'number' && apt.totalPrice > 0) {
+      return apt.totalPrice;
+    }
+    return 0;
+  };
+
   // 1. KASANIN TOPLAM CİROSU (TOTAL REVENUE)
   const totalRevenue = useMemo(() => {
     return filteredAppointments
       .filter((a) => a.status === 'completed' || a.status === 'confirmed')
-      .reduce((sum, a) => sum + (a.totalPrice || 0), 0);
-  }, [filteredAppointments]);
+      .reduce((sum, a) => sum + getAppointmentAmount(a), 0);
+  }, [filteredAppointments, services]);
 
   const completedCount = filteredAppointments.filter((a) => a.status === 'completed' || a.status === 'confirmed').length;
 
@@ -133,10 +154,10 @@ export const ReportsView: React.FC = () => {
     return barbers.map((b) => {
       const bApts = filteredAppointments.filter((a) => a.barberId === b.id);
       const bCompleted = bApts.filter((a) => a.status === 'completed' || a.status === 'confirmed');
-      const bRevenue = bCompleted.reduce((sum, a) => sum + (a.totalPrice || 0), 0);
+      const bRevenue = bCompleted.reduce((sum, a) => sum + getAppointmentAmount(a), 0);
       const rate = b.commissionRate ?? 50;
 
-      // Toplam Hakediş
+      // Toplam Hakediş = Yöneticinin Fiyatlarına Göre Ciro * Prim Oranı
       const totalEarned = Math.round((bRevenue * rate) / 100);
 
       // Ödenen Avans / Prim
@@ -157,7 +178,15 @@ export const ReportsView: React.FC = () => {
         remainingAmount,
       };
     });
-  }, [barbers, filteredAppointments, filteredPayouts]);
+  }, [barbers, filteredAppointments, filteredPayouts, services]);
+
+  // Personel için sadece kendi satırı, Yönetici için tüm kadro
+  const displayedBarberStats = useMemo(() => {
+    if (isStaff && loggedInBarberId) {
+      return barberStats.filter((b) => b.barber.id === loggedInBarberId);
+    }
+    return barberStats;
+  }, [isStaff, loggedInBarberId, barberStats]);
 
   // 2. PERSONELİN TOPLAM HAKEDİŞİ, ÖDENEN VE KALAN
   const totalStaffEarnings = useMemo(() => {
@@ -293,113 +322,201 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 MAIN FINANCIAL KPI CARDS (USER EXACT SPECIFICATION) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. KASANIN TOPLAM CİROSU */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/40 shadow-xl space-y-3 relative overflow-hidden">
-          <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
-            <span className="flex items-center gap-1.5">
-              <Banknote className="w-4 h-4 text-amber-500" />
-              <span>1. Kasanın Toplam Cirosu</span>
-            </span>
-            <span className="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Brüt Gelir
-            </span>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-white font-mono">
-            ₺{totalRevenue.toLocaleString('tr-TR')}
-          </div>
-          <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
-            <span>Tamamlanan Tıraş:</span>
-            <strong className="text-emerald-400 font-mono">{completedCount} İşlem</strong>
-          </div>
-        </div>
-
-        {/* 2. PERSONEL HAKEDİŞİ (TOPLAM, ÖDENEN VE KALAN) */}
-        <div className="p-5 rounded-2xl bg-slate-900/90 border border-amber-500/30 shadow-xl space-y-3">
-          <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
-            <span className="flex items-center gap-1.5">
-              <Wallet className="w-4 h-4 text-amber-400" />
-              <span>2. Personel Hakedişi</span>
-            </span>
-            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Prim Dağılımı
-            </span>
-          </div>
-
-          <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
-            ₺{totalStaffEarnings.toLocaleString('tr-TR')}
-            <span className="text-xs font-normal text-slate-400 ml-1.5">(Toplam)</span>
-          </div>
-
-          <div className="space-y-1 pt-2 border-t border-slate-800 text-[11px]">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Ödenen Avans/Prim:</span>
-              <strong className="text-emerald-400 font-mono">₺{totalStaffPaid.toLocaleString('tr-TR')}</strong>
+      {/* 4 MAIN FINANCIAL KPI CARDS */}
+      {!isStaff ? (
+        /* YÖNETİCİ KASA VE SALON GENEL BAKIŞ KARTLARI */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 1. KASANIN TOPLAM CİROSU */}
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/40 shadow-xl space-y-3 relative overflow-hidden">
+            <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+              <span className="flex items-center gap-1.5">
+                <Banknote className="w-4 h-4 text-amber-500" />
+                <span>1. Kasanın Toplam Cirosu</span>
+              </span>
+              <span className="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/20">
+                Yönetici Tarifesi
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Kalan Ödenecek:</span>
-              <strong className={`font-mono ${totalStaffRemaining > 0 ? 'text-amber-400 font-bold' : 'text-slate-400'}`}>
-                ₺{totalStaffRemaining.toLocaleString('tr-TR')}
-              </strong>
+            <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+              ₺{totalRevenue.toLocaleString('tr-TR')}
+            </div>
+            <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
+              <span>Tamamlanan Tıraş:</span>
+              <strong className="text-emerald-400 font-mono">{completedCount} İşlem</strong>
             </div>
           </div>
-        </div>
 
-        {/* 3. HARCAMALAR / GİDERLER */}
-        <div className="p-5 rounded-2xl bg-slate-900/90 border border-rose-500/30 shadow-xl space-y-3">
-          <div className="flex items-center justify-between text-xs text-rose-400 font-bold">
-            <span className="flex items-center gap-1.5">
-              <Receipt className="w-4 h-4 text-rose-400" />
-              <span>3. Harcamalar (Giderler)</span>
-            </span>
-            <button
-              onClick={() => setShowExpenseModal(true)}
-              className="text-[10px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30 transition-colors flex items-center gap-1"
-            >
-              <PlusCircle className="w-3 h-3" />
-              <span>Gider Ekle</span>
-            </button>
-          </div>
-
-          <div className="text-2xl sm:text-3xl font-black text-rose-400 font-mono">
-            ₺{totalExpenses.toLocaleString('tr-TR')}
-          </div>
-
-          <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
-            <span>Kayıtlı Gider Sayısı:</span>
-            <strong className="text-slate-200 font-mono">{filteredExpenses.length} Kalem</strong>
-          </div>
-        </div>
-
-        {/* 4. NET KASA BAKİYESİ */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950 border border-emerald-500/40 shadow-xl space-y-3 relative overflow-hidden">
-          <div className="flex items-center justify-between text-xs text-emerald-400 font-bold">
-            <span className="flex items-center gap-1.5">
-              <PiggyBank className="w-4 h-4 text-emerald-400" />
-              <span>4. Net Kasa Bakiyesi</span>
-            </span>
-            <span className="text-[10px] bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              Elde Kalan Nitelik
-            </span>
-          </div>
-
-          <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
-            ₺{netCashInHand.toLocaleString('tr-TR')}
-          </div>
-
-          <div className="space-y-1 pt-2 border-t border-slate-800 text-[11px]">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Fiili Kasa (Ciro - Ödenen - Gider):</span>
-              <strong className="text-emerald-400 font-mono">₺{netCashInHand.toLocaleString('tr-TR')}</strong>
+          {/* 2. PERSONEL HAKEDİŞİ (TOPLAM, ÖDENEN VE KALAN) */}
+          <div className="p-5 rounded-2xl bg-slate-900/90 border border-amber-500/30 shadow-xl space-y-3">
+            <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+              <span className="flex items-center gap-1.5">
+                <Wallet className="w-4 h-4 text-amber-400" />
+                <span>2. Personel Hakedişi</span>
+              </span>
+              <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20">
+                Prim Dağılımı
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Net Salon Kârı (Tahakkuk):</span>
-              <strong className="text-emerald-300 font-mono">₺{netSalonProfit.toLocaleString('tr-TR')}</strong>
+
+            <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
+              ₺{totalStaffEarnings.toLocaleString('tr-TR')}
+              <span className="text-xs font-normal text-slate-400 ml-1.5">(Toplam)</span>
+            </div>
+
+            <div className="space-y-1 pt-2 border-t border-slate-800 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Ödenen Avans/Prim:</span>
+                <strong className="text-emerald-400 font-mono">₺{totalStaffPaid.toLocaleString('tr-TR')}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Kalan Ödenecek:</span>
+                <strong className={`font-mono ${totalStaffRemaining > 0 ? 'text-amber-400 font-bold' : 'text-slate-400'}`}>
+                  ₺{totalStaffRemaining.toLocaleString('tr-TR')}
+                </strong>
+              </div>
             </div>
           </div>
+
+          {/* 3. HARCAMALAR / GİDERLER */}
+          <div className="p-5 rounded-2xl bg-slate-900/90 border border-rose-500/30 shadow-xl space-y-3">
+            <div className="flex items-center justify-between text-xs text-rose-400 font-bold">
+              <span className="flex items-center gap-1.5">
+                <Receipt className="w-4 h-4 text-rose-400" />
+                <span>3. Harcamalar (Giderler)</span>
+              </span>
+              <button
+                onClick={() => setShowExpenseModal(true)}
+                className="text-[10px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30 transition-colors flex items-center gap-1"
+              >
+                <PlusCircle className="w-3 h-3" />
+                <span>Gider Ekle</span>
+              </button>
+            </div>
+
+            <div className="text-2xl sm:text-3xl font-black text-rose-400 font-mono">
+              ₺{totalExpenses.toLocaleString('tr-TR')}
+            </div>
+
+            <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
+              <span>Kayıtlı Gider Sayısı:</span>
+              <strong className="text-slate-200 font-mono">{filteredExpenses.length} Kalem</strong>
+            </div>
+          </div>
+
+          {/* 4. NET KASA BAKİYESİ */}
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950 border border-emerald-500/40 shadow-xl space-y-3 relative overflow-hidden">
+            <div className="flex items-center justify-between text-xs text-emerald-400 font-bold">
+              <span className="flex items-center gap-1.5">
+                <PiggyBank className="w-4 h-4 text-emerald-400" />
+                <span>4. Net Kasa Bakiyesi</span>
+              </span>
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                Elde Kalan
+              </span>
+            </div>
+
+            <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
+              ₺{netCashInHand.toLocaleString('tr-TR')}
+            </div>
+
+            <div className="space-y-1 pt-2 border-t border-slate-800 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Fiili Kasa:</span>
+                <strong className="text-emerald-400 font-mono">₺{netCashInHand.toLocaleString('tr-TR')}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Net Salon Kârı:</span>
+                <strong className="text-emerald-300 font-mono">₺{netSalonProfit.toLocaleString('tr-TR')}</strong>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* PERSONELİN KENDİ HAKEDİŞ VE CİRO KARTLARI */
+        (() => {
+          const myStat = displayedBarberStats[0];
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 1. ÜRETTİĞİM CİRO */}
+              <div className="p-5 rounded-2xl bg-slate-900/90 border border-amber-500/30 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 text-amber-500" />
+                    <span>Ürettiğim Hizmet Cirosu</span>
+                  </span>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    Resmi Tarife
+                  </span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+                  ₺{(myStat?.revenue || 0).toLocaleString('tr-TR')}
+                </div>
+                <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800">
+                  <span>Tamamlanan Tıraş:</span>
+                  <strong className="text-emerald-400 font-mono">{myStat?.completedApts || 0} Randevu</strong>
+                </div>
+              </div>
+
+              {/* 2. TOPLAM HAKEDİŞ KAZANCIM */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/40 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span>Toplam Hakediş Kazancım</span>
+                  </span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 font-semibold font-mono">
+                    %{myStat?.commissionRate || 50} Prim
+                  </span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
+                  ₺{(myStat?.totalEarned || 0).toLocaleString('tr-TR')}
+                </div>
+                <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                  <span>Yönetici hizmet fiyatları ve prim oranınızla hesaplanmıştır</span>
+                </div>
+              </div>
+
+              {/* 3. ALDIĞIM AVANS / ÖDEME */}
+              <div className="p-5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-emerald-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-emerald-400" />
+                    <span>Tarafıma Ödenen Avans</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    Ödeme Alındı
+                  </span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
+                  ₺{(myStat?.paidAmount || 0).toLocaleString('tr-TR')}
+                </div>
+                <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                  <span>Hesabınıza veya nakit olarak iletilen ödemeler</span>
+                </div>
+              </div>
+
+              {/* 4. KALAN NET ALACAĞIM */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-slate-900 to-slate-950 border border-emerald-500/40 shadow-xl space-y-3">
+                <div className="flex items-center justify-between text-xs text-emerald-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <PiggyBank className="w-4 h-4 text-emerald-400" />
+                    <span>Kalan Net Alacağım (Bakiye)</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    Ödenecek
+                  </span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
+                  ₺{(myStat?.remainingAmount || 0).toLocaleString('tr-TR')}
+                </div>
+                <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                  <span>Salondan tahsil edilecek kalan net hakedişiniz</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()
+      )}
 
       {/* SECTION 2: STAFF EARNINGS, PAID ADVANCES & REMAINING TABLE */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-2xl space-y-0">
@@ -407,20 +524,32 @@ export const ReportsView: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-500" />
-              <span>Personel Hakediş, Ödenen & Kalan Takip Tablosu</span>
+              <span>{isStaff ? 'Hakediş, Ciro ve Avans Durumum' : 'Personel Hakediş, Ciro & Avans Takip Tablosu'}</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Her çalışanın prim oranını değiştirebilir, toplam hakedişini, verilen avansları ve kalan borcu görebilirsiniz.
+              {isStaff
+                ? 'Yöneticinin belirlediği hizmet fiyatları ve prim oranınıza göre kazancınız, ödenen avanslar ve kalan alacağınız'
+                : 'Yöneticinin belirlediği hizmet fiyatları üzerinden her personelin ürettiği ciro, prim hakedişi, avanslar ve kalan borç'}
             </p>
           </div>
 
-          <button
-            onClick={() => setShowPayoutModal(true)}
-            className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md flex items-center gap-1.5 shrink-0"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Personel Avans / Ödeme Kaydet</span>
-          </button>
+          {!isStaff && (
+            <button
+              onClick={() => setShowPayoutModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md flex items-center gap-1.5 shrink-0"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Personel Avans / Ödeme Kaydet</span>
+            </button>
+          )}
+        </div>
+
+        {/* Pricing System Info Alert */}
+        <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 text-[11px] text-amber-300">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>
+            <strong>Fiyatlandırma & Hakediş:</strong> Cirolar ve hakedişler, yöneticinin <strong>Hizmet Yönetimi</strong> sekmesinde belirlediği güncel fiyatlar ve personelin prim oranı (%) esas alınarak hesaplanır.
+          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -428,17 +557,17 @@ export const ReportsView: React.FC = () => {
             <thead className="bg-slate-950/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800 font-bold">
               <tr>
                 <th className="p-3.5">Personel / Berber</th>
-                <th className="p-3.5 text-center">Tıraş</th>
+                <th className="p-3.5 text-center">İşlem Adedi</th>
                 <th className="p-3.5 text-right">Ürettiği Ciro (₺)</th>
                 <th className="p-3.5 text-center">Prim Oranı (%)</th>
                 <th className="p-3.5 text-right">Toplam Hakediş (₺)</th>
-                <th className="p-3.5 text-right text-emerald-400">Ödenen (Avans) (₺)</th>
-                <th className="p-3.5 text-right text-amber-400">Kalan Borç (₺)</th>
-                <th className="p-3.5 text-center">İşlem</th>
+                <th className="p-3.5 text-right text-emerald-400">Ödenen Avans (₺)</th>
+                <th className="p-3.5 text-right text-amber-400">Kalan Alacak / Borç (₺)</th>
+                {!isStaff && <th className="p-3.5 text-center">İşlem</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
-              {barberStats.map(
+              {displayedBarberStats.map(
                 ({ barber, completedApts, revenue, commissionRate, totalEarned, paidAmount, remainingAmount }) => {
                   const isEditingThis = editingCommissionId === barber.id;
 
@@ -475,38 +604,44 @@ export const ReportsView: React.FC = () => {
                       </td>
 
                       <td className="p-3.5 text-center">
-                        {isEditingThis ? (
-                          <div className="inline-flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-amber-500">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={tempCommissionRate}
-                              onChange={(e) => setTempCommissionRate(Number(e.target.value))}
-                              className="w-14 bg-slate-900 border border-slate-700 text-white font-mono font-bold px-2 py-1 rounded text-center text-xs focus:outline-none"
-                            />
-                            <span className="text-amber-400 font-bold text-xs">%</span>
+                        {!isStaff ? (
+                          isEditingThis ? (
+                            <div className="inline-flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-amber-500">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={tempCommissionRate}
+                                onChange={(e) => setTempCommissionRate(Number(e.target.value))}
+                                className="w-14 bg-slate-900 border border-slate-700 text-white font-mono font-bold px-2 py-1 rounded text-center text-xs focus:outline-none"
+                              />
+                              <span className="text-amber-400 font-bold text-xs">%</span>
+                              <button
+                                onClick={() => handleSaveCommissionRate(barber.id)}
+                                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-1 rounded-lg transition-colors"
+                                title="Kaydet"
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              </button>
+                            </div>
+                          ) : (
                             <button
-                              onClick={() => handleSaveCommissionRate(barber.id)}
-                              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-1 rounded-lg transition-colors"
-                              title="Kaydet"
+                              onClick={() => {
+                                setEditingCommissionId(barber.id);
+                                setTempCommissionRate(commissionRate);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono font-bold transition-all hover:scale-105"
+                              title="Yönetici: Prim oranını değiştirmek için tıklayın"
                             >
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <Percent className="w-3 h-3" />
+                              <span>%{commissionRate}</span>
+                              <Edit3 className="w-3 h-3 text-slate-400 opacity-70" />
                             </button>
-                          </div>
+                          )
                         ) : (
-                          <button
-                            onClick={() => {
-                              setEditingCommissionId(barber.id);
-                              setTempCommissionRate(commissionRate);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono font-bold transition-all hover:scale-105"
-                            title="Prim oranını değiştirmek için tıklayın"
-                          >
-                            <Percent className="w-3 h-3" />
-                            <span>%{commissionRate}</span>
-                            <Edit3 className="w-3 h-3 text-slate-400 opacity-70" />
-                          </button>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 text-amber-400 font-mono font-bold text-xs">
+                            %{commissionRate}
+                          </span>
                         )}
                       </td>
 
@@ -522,18 +657,20 @@ export const ReportsView: React.FC = () => {
                         ₺{remainingAmount.toLocaleString('tr-TR')}
                       </td>
 
-                      <td className="p-3.5 text-center">
-                        <button
-                          onClick={() => {
-                            setPayoutBarberId(barber.id);
-                            setShowPayoutModal(true);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold transition-all flex items-center gap-1 mx-auto"
-                        >
-                          <PlusCircle className="w-3 h-3" />
-                          <span>Ödeme Ekle</span>
-                        </button>
-                      </td>
+                      {!isStaff && (
+                        <td className="p-3.5 text-center">
+                          <button
+                            onClick={() => {
+                              setPayoutBarberId(barber.id);
+                              setShowPayoutModal(true);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold transition-all flex items-center gap-1 mx-auto"
+                          >
+                            <PlusCircle className="w-3 h-3" />
+                            <span>Ödeme Ekle</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 }
@@ -543,7 +680,8 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* SECTION 3: EXPENSES LIST & MANAGEMENT */}
+      {/* SECTION 3: EXPENSES LIST & MANAGEMENT (YÖNETİCİYE ÖZEL) */}
+      {!isStaff && (
       <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -604,6 +742,7 @@ export const ReportsView: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* MODAL 1: NEW EXPENSE FORM */}
       {showExpenseModal && (

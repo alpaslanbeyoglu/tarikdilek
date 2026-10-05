@@ -45,7 +45,9 @@ import {
 } from '../services/googleDriveSync';
 
 export const SettingsView: React.FC = () => {
-  const { settings, updateSettings, triggerTestPushNotification, resetToDefaultData } = useBarber();
+  const { settings, updateSettings, triggerTestPushNotification, resetToDefaultData, currentUserRole } = useBarber();
+
+  const isStaff = currentUserRole === 'staff';
 
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [shopName, setShopName] = useState(settings.shopName);
@@ -240,6 +242,23 @@ export const SettingsView: React.FC = () => {
     };
     reader.readAsText(file);
   };
+
+  if (isStaff) {
+    return (
+      <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center max-w-xl mx-auto space-y-4 my-12 shadow-2xl animate-in fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-bold text-white">Yönetici Yetkisi Gereklidir</h3>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Salon çalışma saatleri, bildirim ayarları, yedekleme ve tema yönetimi sadece <strong>Salon Yöneticisi</strong> yetkisindedir.
+        </p>
+        <p className="text-xs text-slate-500">
+          Kendi profil bilgilerinizi, vesikalık fotoğrafınızı ve PIN kodunuzu güncellemek için <strong>Profilim</strong> sayfasını kullanabilirsiniz.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">

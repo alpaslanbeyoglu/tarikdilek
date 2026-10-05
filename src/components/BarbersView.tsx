@@ -94,6 +94,7 @@ export const BarbersView: React.FC = () => {
     currentUserRole,
     loggedInBarberId,
     currentUser,
+    services,
   } = useBarber();
 
   const isStaff = currentUserRole === 'staff';
@@ -222,6 +223,11 @@ export const BarbersView: React.FC = () => {
     e.preventDefault();
     if (!name.trim() || !title.trim()) return;
 
+    // Staff cannot alter commission rate %, preserve existing rate
+    const finalCommissionRate = isStaff && editingBarber
+      ? (editingBarber.commissionRate || 50)
+      : (Number(commissionRate) || 50);
+
     if (editingBarber) {
       updateBarber({
         ...editingBarber,
@@ -239,10 +245,11 @@ export const BarbersView: React.FC = () => {
           lunchEnd,
         },
         daysOff: selectedDaysOff,
-        commissionRate: Number(commissionRate) || 50,
+        commissionRate: finalCommissionRate,
       });
-      showToast(`✓ ${name.trim()} bilgileri ve prim oranı güncellendi`);
+      showToast(`✓ ${name.trim()} profil bilgileri güncellendi`);
     } else {
+      if (isStaff) return; // Staff cannot create new staff members
       addBarber({
         name: name.trim(),
         title: title.trim(),
@@ -261,10 +268,11 @@ export const BarbersView: React.FC = () => {
           lunchEnd,
         },
         daysOff: selectedDaysOff,
-        commissionRate: Number(commissionRate) || 50,
+        commissionRate: finalCommissionRate,
       });
       showToast(`✓ Yeni personel ${name.trim()} kadroya eklendi`);
     }
+
     setIsAddModalOpen(false);
   };
 
@@ -361,13 +369,15 @@ export const BarbersView: React.FC = () => {
             />
           </div>
 
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Yeni Personel Ekle</span>
-          </button>
+          {!isStaff && (
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shrink-0"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Yeni Personel Ekle</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -375,7 +385,17 @@ export const BarbersView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredBarbers.map((barber) => {
           const barberApts = appointments.filter((a) => a.barberId === barber.id);
-          const completedCount = barberApts.filter((a) => a.status === 'completed').length;
+          const completedApts = barberApts.filter((a) => a.status === 'completed' || a.status === 'confirmed');
+          const completedCount = completedApts.length;
+          const totalRevenue = completedApts.reduce((sum, a) => {
+            if (typeof a.totalPrice === 'number' && a.totalPrice > 0) return sum + a.totalPrice;
+            const sPrice = (a.serviceIds || []).reduce((sSum, sId) => {
+              const s = services.find((item) => item.id === sId);
+              return sSum + (s?.price || 0);
+            }, 0);
+            return sum + sPrice;
+          }, 0);
+          const earnedHakedis = Math.round((totalRevenue * (barber.commissionRate ?? 50)) / 100);
 
           return (
             <div
@@ -516,14 +536,21 @@ export const BarbersView: React.FC = () => {
 
               {/* Bottom Actions */}
               <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    <strong className="text-white">{barberApts.length}</strong> randevu
-                  </span>
-                  <span aria-hidden="true" className="text-slate-600">·</span>
-                  <span className="text-[11px] text-emerald-400 font-mono">
-                    <strong>{completedCount}</strong> bitti
-                  </span>
+                <div className="flex flex-col gap-0.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      <strong className="text-white">{barberApts.length}</strong> randevu
+                    </span>
+                    <span aria-hidden="true" className="text-slate-600">·</span>
+                    <span className="text-[11px] text-emerald-400 font-mono">
+                      <strong>{completedCount}</strong> bitti
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
+                    Ciro: <strong className="text-white">₺{totalRevenue.toLocaleString('tr-TR')}</strong>
+                    <span className="mx-1 text-slate-600">|</span>
+                    Hakediş: <strong className="text-amber-400">₺{earnedHakedis.toLocaleString('tr-TR')}</strong>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -785,19 +812,30 @@ export const BarbersView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-amber-400 font-medium mb-1">
-                    Prim / Hakediş Oranı (%)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-amber-400 font-medium">
+                      Prim / Hakediş Oranı (%)
+                    </label>
+                    {isStaff && (
+                      <span className="text-[10px] text-slate-400 font-normal bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                        🔒 Yönetici Yetkisi
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       type="number"
                       min="0"
                       max="100"
                       required
+                      disabled={isStaff}
                       placeholder="50"
                       value={commissionRate}
                       onChange={(e) => setCommissionRate(Number(e.target.value))}
-                      className="w-full rounded-xl bg-slate-950 border border-amber-500/40 px-3 py-2 text-white font-mono font-bold focus:border-amber-400 focus:outline-none pr-8"
+                      className={`w-full rounded-xl bg-slate-950 border border-amber-500/40 px-3 py-2 text-white font-mono font-bold focus:border-amber-400 focus:outline-none pr-8 ${
+                        isStaff ? 'opacity-60 cursor-not-allowed bg-slate-900 border-slate-700 text-slate-300' : ''
+                      }`}
+                      title={isStaff ? 'Prim / Hakediş oranı yalnızca Salon Yöneticisi tarafından güncellenebilir' : 'Prim oranı'}
                     />
                     <span className="absolute right-3 top-2.5 text-xs text-amber-400 font-bold">%</span>
                   </div>

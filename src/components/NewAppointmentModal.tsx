@@ -104,6 +104,7 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
       serviceIds: selectedServiceIds,
       date,
       startTime: time,
+      totalPrice,
       notes: notes.trim() || undefined,
       source: 'manual',
     });
@@ -241,9 +242,12 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
 
           {/* Service Selection */}
           <div>
-            <label className="block text-slate-300 font-medium mb-1">
-              Hizmetler (Toplam: {totalDuration} dakika)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-slate-300 font-medium">Hizmetler</label>
+              <div className="text-xs font-bold text-amber-400 font-mono">
+                Toplam: {totalDuration} dk · ₺{totalPrice}
+              </div>
+            </div>
             <div className="max-h-36 overflow-y-auto rounded-xl bg-slate-950 border border-slate-800 p-2 space-y-1">
               {services.map((s) => {
                 const checked = selectedServiceIds.includes(s.id);
@@ -252,11 +256,11 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                     key={s.id}
                     onClick={() => toggleService(s.id)}
                     className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors ${
-                      checked ? 'bg-amber-500/20 text-white' : 'hover:bg-slate-900 text-slate-400'
+                      checked ? 'bg-amber-500/20 text-white border border-amber-500/30' : 'hover:bg-slate-900 text-slate-400'
                     }`}
                   >
                     <span className="truncate">{s.name} ({s.durationMinutes} dk)</span>
-                    <span className="text-slate-400 text-[11px]">{s.category}</span>
+                    <span className="font-mono font-bold text-amber-400 text-xs shrink-0 ml-2">₺{s.price}</span>
                   </div>
                 );
               })}

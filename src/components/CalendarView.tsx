@@ -107,6 +107,31 @@ export const CalendarView: React.FC = () => {
     return { total, pending, confirmed, completed, totalMinutes };
   }, [appointments, selectedDate, isStaff, loggedInBarberId]);
 
+  // Günlük Personel Cirosu ve Hakedişi (Yöneticinin belirlediği hizmet fiyatları ve prim oranına göre)
+  const dailyStaffRevenue = useMemo(() => {
+    if (!isStaff || !loggedInBarberId) return 0;
+    return appointments
+      .filter(
+        (a) =>
+          a.barberId === loggedInBarberId &&
+          a.date === selectedDate &&
+          (a.status === 'completed' || a.status === 'confirmed')
+      )
+      .reduce((sum, a) => {
+        const sTotal = (a.serviceIds || []).reduce((sSum, sId) => {
+          const s = services.find((item) => item.id === sId);
+          return sSum + (s?.price || 0);
+        }, 0);
+        return sum + (sTotal > 0 ? sTotal : (a.totalPrice || 0));
+      }, 0);
+  }, [isStaff, loggedInBarberId, appointments, selectedDate, services]);
+
+  const dailyStaffEarnings = useMemo(() => {
+    if (!staffBarber) return 0;
+    const rate = staffBarber.commissionRate ?? 50;
+    return Math.round((dailyStaffRevenue * rate) / 100);
+  }, [dailyStaffRevenue, staffBarber]);
+
   // Helper for local date YYYY-MM-DD without timezone shifts
   const getLocalDateString = (d: Date): string => {
     const year = d.getFullYear();
@@ -329,6 +354,45 @@ export const CalendarView: React.FC = () => {
         </div>
       </div>
 
+      {/* STAFF PERSONAL DAILY EARNINGS & APPOINTMENT BANNER */}
+      {isStaff && staffBarber && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-slate-900 to-slate-900 border border-amber-500/30 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <img
+              src={staffBarber.avatar}
+              alt={staffBarber.name}
+              className="w-11 h-11 rounded-2xl object-cover border border-amber-500/40 shrink-0"
+            />
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-white">{staffBarber.name}</span>
+                <span className="text-[10px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30 font-semibold font-mono">
+                  %{staffBarber.commissionRate || 50} Prim (Yönetici)
+                </span>
+                <span className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800">
+                  {stats.completed + stats.confirmed} Aktif Randevu
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {formattedDateTitle} tarihli randevularınız ve yönetici hizmet fiyat tarifesine göre günlük hakedişiniz
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-end sm:self-auto bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 text-xs shrink-0">
+            <div>
+              <span className="text-[10px] text-slate-400 block">Üretilen Ciro:</span>
+              <span className="font-mono font-bold text-white">₺{dailyStaffRevenue.toLocaleString('tr-TR')}</span>
+            </div>
+            <div className="w-px h-7 bg-slate-800" />
+            <div>
+              <span className="text-[10px] text-amber-400 font-semibold block">Günün Hakedişi:</span>
+              <span className="font-mono font-extrabold text-amber-400 text-sm">₺{dailyStaffEarnings.toLocaleString('tr-TR')}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. BARBER SELECTOR CHIPS & STATUS FILTER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
         {/* Barber Filter Chips */}
@@ -548,12 +612,25 @@ export const CalendarView: React.FC = () => {
                           </span>
                           <span aria-hidden="true" className="text-slate-600">·</span>
                           <span className="font-mono text-slate-400">{apt.totalDuration} dk</span>
-                          {apt.totalPrice > 0 && (
-                            <>
-                              <span aria-hidden="true" className="text-slate-600">·</span>
-                              <span className="font-mono font-bold text-white">₺{apt.totalPrice}</span>
-                            </>
-                          )}
+                          {(() => {
+                            const sCalculated = (apt.serviceIds || []).reduce((sum, sId) => {
+                              const s = services.find((item) => item.id === sId);
+                              return sum + (s?.price || 0);
+                            }, 0);
+                            const aptPrice = sCalculated > 0 ? sCalculated : (apt.totalPrice || 0);
+                            const commRate = barber?.commissionRate ?? 50;
+                            const hakedisAmt = Math.round((aptPrice * commRate) / 100);
+
+                            return aptPrice > 0 ? (
+                              <>
+                                <span aria-hidden="true" className="text-slate-600">·</span>
+                                <span className="font-mono font-bold text-amber-400">₺{aptPrice}</span>
+                                <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                  Hakediş: ₺{hakedisAmt}
+                                </span>
+                              </>
+                            ) : null;
+                          })()}
                         </div>
 
                         {apt.notes && (

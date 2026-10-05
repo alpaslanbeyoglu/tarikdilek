@@ -51,6 +51,8 @@ export const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   const [editTime, setEditTime] = useState(appointment?.startTime || '');
   const [editBarberId, setEditBarberId] = useState(appointment?.barberId || '');
   const [justUpdatedStatus, setJustUpdatedStatus] = useState<string | null>(null);
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [editPriceValue, setEditPriceValue] = useState<number>(0);
 
   if (!appointment) return null;
 
@@ -63,6 +65,24 @@ export const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   const barber = barbers.find((b) => b.id === currentAppointment.barberId);
   const appointmentServices = services.filter((s) => currentAppointment.serviceIds.includes(s.id));
   const serviceNames = appointmentServices.map((s) => s.name).join(', ');
+
+  const calculatedServicePrice = appointmentServices.reduce((sum, s) => sum + (s.price || 0), 0);
+  const effectivePrice = calculatedServicePrice > 0
+    ? calculatedServicePrice
+    : (typeof currentAppointment.totalPrice === 'number' && currentAppointment.totalPrice > 0
+        ? currentAppointment.totalPrice
+        : 0);
+
+  const commissionRate = barber?.commissionRate ?? 50;
+  const earnedHakedis = Math.round((effectivePrice * commissionRate) / 100);
+
+  const handleSaveCustomPrice = () => {
+    updateAppointment({
+      ...currentAppointment,
+      totalPrice: Number(editPriceValue) || 0,
+    });
+    setIsEditingPrice(false);
+  };
 
   const customerConfirmationUrl = buildCustomerConfirmationWhatsAppUrl(
     currentAppointment.customerPhone,
@@ -314,14 +334,106 @@ export const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-start justify-between gap-4 pt-1 border-t border-slate-800/80">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <Scissors className="w-3.5 h-3.5 text-slate-500" />
-              <span>Seçilen Hizmetler:</span>
-            </span>
-            <span className="text-right text-slate-200 font-medium leading-relaxed">
-              {serviceNames}
-            </span>
+          {/* Services with Individual Manager Prices */}
+          <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+                <Scissors className="w-3.5 h-3.5 text-slate-500" />
+                <span>Seçilen Hizmetler ve Fiyatları:</span>
+              </span>
+              <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 font-medium">
+                Yönetici Tarifesi
+              </span>
+            </div>
+            <div className="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 space-y-2">
+              {appointmentServices.length > 0 ? (
+                appointmentServices.map((s) => {
+                  const serviceHakedis = Math.round(((s.price || 0) * commissionRate) / 100);
+                  return (
+                    <div key={s.id} className="flex items-center justify-between text-slate-200 text-xs">
+                      <div className="min-w-0">
+                        <span className="font-semibold text-white">{s.name}</span>
+                        <span className="text-[11px] text-slate-400 ml-1.5">({s.durationMinutes} dk)</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono font-bold text-amber-400">₺{s.price}</span>
+                        <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                          Prim: ₺{serviceHakedis}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-slate-400 text-xs">{serviceNames || 'Hizmet bilgisi'}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Total Price & Staff Commission Calculation */}
+          <div className="pt-2 border-t border-slate-800/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 font-medium">Toplam Randevu Tutarı:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-black text-white font-mono">
+                  ₺{effectivePrice}
+                </span>
+                {!isStaff && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditPriceValue(effectivePrice);
+                      setIsEditingPrice(!isEditingPrice);
+                    }}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold underline"
+                  >
+                    {isEditingPrice ? 'İptal' : 'Fiyat Düzenle'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Custom Price Editor for Manager */}
+            {isEditingPrice && !isStaff && (
+              <div className="p-2.5 bg-slate-900 border border-amber-500/40 rounded-xl flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-300">Yeni Tutar:</span>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1.5 text-xs text-amber-400 font-mono">₺</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={editPriceValue}
+                      onChange={(e) => setEditPriceValue(Number(e.target.value))}
+                      className="w-24 bg-slate-950 border border-slate-700 rounded-lg pl-6 pr-2 py-1 text-white font-mono font-bold text-xs"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveCustomPrice}
+                    className="px-3 py-1 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs hover:bg-amber-400"
+                  >
+                    Kaydet
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Stylist Commission Hakediş Summary */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-amber-300 font-bold block">
+                  Personel Hakedişi (%{commissionRate} prim):
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Yöneticinin belirlediği hizmet tarifesine göre hesaplanmıştır
+                </span>
+              </div>
+              <span className="font-mono font-extrabold text-amber-400 text-base">
+                ₺{earnedHakedis}
+              </span>
+            </div>
           </div>
 
           {currentAppointment.notes && (

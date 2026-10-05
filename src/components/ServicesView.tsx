@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 
 export const ServicesView: React.FC = () => {
-  const { services, addService, updateService, deleteService } = useBarber();
+  const { services, addService, updateService, deleteService, currentUserRole } = useBarber();
+
+  const isStaff = currentUserRole === 'staff';
 
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +29,7 @@ export const ServicesView: React.FC = () => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<'Saç' | 'Sakal' | 'Kombin' | 'Bakım & Spa'>('Saç');
   const [durationMinutes, setDurationMinutes] = useState(30);
+  const [price, setPrice] = useState<number>(350);
   const [description, setDescription] = useState('');
   const [popular, setPopular] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -46,6 +49,7 @@ export const ServicesView: React.FC = () => {
     setName('');
     setCategory('Saç');
     setDurationMinutes(30);
+    setPrice(350);
     setDescription('');
     setPopular(false);
     setIsModalOpen(true);
@@ -56,6 +60,7 @@ export const ServicesView: React.FC = () => {
     setName(s.name);
     setCategory(s.category);
     setDurationMinutes(s.durationMinutes);
+    setPrice(s.price || 0);
     setDescription(s.description);
     setPopular(!!s.popular);
     setIsModalOpen(true);
@@ -71,6 +76,7 @@ export const ServicesView: React.FC = () => {
         name: name.trim(),
         category,
         durationMinutes: Number(durationMinutes),
+        price: Number(price) || 0,
         description: description.trim(),
         popular,
       });
@@ -79,7 +85,7 @@ export const ServicesView: React.FC = () => {
         name: name.trim(),
         category,
         durationMinutes: Number(durationMinutes),
-        price: 0,
+        price: Number(price) || 0,
         description: description.trim(),
         popular,
       });
@@ -94,15 +100,49 @@ export const ServicesView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Information Banner regarding Manager Price Determination & Staff Hakediş */}
+      {!isStaff ? (
+        <div className="bg-gradient-to-r from-amber-500/15 via-slate-900 to-slate-900 border border-amber-500/30 p-4 rounded-2xl flex items-start gap-3 shadow-lg">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="text-xs space-y-1">
+            <h4 className="font-bold text-amber-400 text-sm">
+              Yönetici Hizmet Fiyat Politikası & Personel Hakediş Sistemi
+            </h4>
+            <p className="text-slate-300 leading-relaxed">
+              Hizmet fiyatlarını yalnızca siz (Salon Yöneticisi) belirlersiniz. Personeller fiyatlara müdahale edemez. Kasa cirosu, online randevular ve berberlerin kişisel hakedişleri (% primleri üzerinden) doğrudan burada belirlediğiniz fiyatlar baz alınarak hesaplanır.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl flex items-start gap-3 shadow-lg">
+          <div className="w-9 h-9 rounded-xl bg-slate-800 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Tag className="w-5 h-5" />
+          </div>
+          <div className="text-xs space-y-1">
+            <h4 className="font-bold text-white flex items-center gap-2 text-sm">
+              <span>Hizmet & Fiyat Listesi (Personel Görüntüleme Modu)</span>
+              <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                Yönetici Tarifesi
+              </span>
+            </h4>
+            <p className="text-slate-400 leading-relaxed">
+              Hizmet fiyatları salon yöneticiniz tarafından belirlenmektedir. Tamamladığınız her randevuda hakedişiniz bu resmi fiyat tarifesi ve prim oranınız üzerinden otomatik olarak hesabınıza yansıtılır.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Top Header & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
         <div>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Scissors className="w-5 h-5 text-amber-500 -rotate-45" />
-            <span>Hizmet ve Süre Yönetimi ({services.length} Hizmet)</span>
+            <span>Hizmet ve Fiyat Yönetimi ({services.length} Hizmet)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Salonun sunduğu saç, sakal ve bakım hizmetlerini ve tahmini işlem sürelerini yönetin
+            Hizmet fiyatlarını belirleyin. Personel hakedişleri ve kasa cirosu bu fiyatlar üzerinden hesaplanır.
           </p>
         </div>
 
@@ -118,13 +158,15 @@ export const ServicesView: React.FC = () => {
             />
           </div>
 
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Yeni Hizmet Ekle</span>
-          </button>
+          {!isStaff && (
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shrink-0"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Yeni Hizmet Ekle</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -163,48 +205,73 @@ export const ServicesView: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <span className="inline-block text-[10px] font-medium text-slate-400 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
-                    {service.category}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block text-[10px] font-medium text-slate-400 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
+                      {service.category}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 font-mono flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-500" />
+                      <span>{service.durationMinutes} dk</span>
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => openEditModal(service)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title="Hizmeti Düzenle"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
+                {!isStaff && (
+                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEditModal(service)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                      title="Hizmeti & Fiyatı Düzenle"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
 
-                  <button
-                    onClick={() => setDeleteConfirmId(service.id)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                    title="Hizmeti Sil / Çıkar"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                    <button
+                      onClick={() => setDeleteConfirmId(service.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                      title="Hizmeti Sil / Çıkar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed mt-2">
+              <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed mt-2">
                 {service.description}
               </p>
             </div>
 
-            {/* Bottom Duration & Actions */}
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 text-amber-400 font-mono font-semibold">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
-                <span>{service.durationMinutes} dakika</span>
-              </span>
+            {/* Bottom Price & Quick Action */}
+            <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-black text-amber-400 font-mono">
+                    ₺{service.price}
+                  </span>
+                  <span className="text-[10px] text-slate-400">/ işlem</span>
+                </div>
 
-              <button
-                onClick={() => openEditModal(service)}
-                className="text-[11px] text-slate-400 hover:text-white transition-colors"
-              >
-                Süreyi Değiştir →
-              </button>
+                {!isStaff ? (
+                  <button
+                    onClick={() => openEditModal(service)}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold transition-colors flex items-center gap-1"
+                  >
+                    <span>Fiyat & Süre Değiştir</span>
+                    <span>→</span>
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-medium">
+                    Yönetici Tarifesi
+                  </span>
+                )}
+              </div>
+
+              {/* Hakediş Preview */}
+              <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Personel Hakediş Payı (%50 prim):</span>
+                <span className="font-mono font-bold text-emerald-400">₺{Math.round(service.price * 0.5)} net</span>
+              </div>
             </div>
           </div>
         ))}
@@ -336,6 +403,55 @@ export const ServicesView: React.FC = () => {
                       {mins} dk
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Fiyat Girişi & Hakediş Bilgilendirmesi */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                <div>
+                  <label className="block font-medium mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-amber-400 font-bold text-xs">
+                      <span>Hizmet Fiyatı (₺)</span>
+                      <span className="text-rose-500">*</span>
+                    </span>
+                    <span className="text-[10px] text-slate-300 font-normal">
+                      Personel hakedişleri bu fiyata göre hesaplanır
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-base font-extrabold text-amber-400 font-mono">₺</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      required
+                      placeholder="350"
+                      value={price}
+                      onChange={(e) => setPrice(Number(e.target.value))}
+                      className="w-full rounded-xl bg-slate-950 border border-amber-500/50 pl-8 pr-3 py-2 text-white font-mono font-black text-base focus:border-amber-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Price Chips */}
+                <div>
+                  <span className="text-[10px] text-amber-300/80 font-medium block mb-1">Hızlı Fiyat Seçimi:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[100, 150, 200, 250, 300, 350, 450, 500, 750, 1000, 1200].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPrice(p)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all ${
+                          price === p
+                            ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-400 scale-105'
+                            : 'bg-slate-950/80 text-slate-300 hover:text-white hover:bg-slate-900 border border-slate-800'
+                        }`}
+                      >
+                        ₺{p}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

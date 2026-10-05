@@ -73,6 +73,7 @@ interface BarberContextType {
     serviceIds: string[];
     date: string;
     startTime: string;
+    totalPrice?: number;
     notes?: string;
     source?: 'online' | 'manual';
   }) => Promise<Appointment>;
@@ -157,7 +158,16 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         const parsed: Service[] = JSON.parse(saved);
         if (parsed.some((s) => s.id === 's-sac-kesim')) {
-          return parsed;
+          // Ensure all services have valid manager price from seed if 0 or missing
+          return parsed.map((s) => {
+            const seed = INITIAL_SERVICES.find(
+              (init) => init.id === s.id || init.name.toLowerCase() === s.name.toLowerCase()
+            );
+            return {
+              ...s,
+              price: typeof s.price === 'number' && s.price > 0 ? s.price : (seed?.price || 250),
+            };
+          });
         }
       } catch {
         // fallback
@@ -794,12 +804,16 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       serviceIds: string[];
       date: string;
       startTime: string;
+      totalPrice?: number;
       notes?: string;
       source?: 'online' | 'manual';
     }): Promise<Appointment> => {
       const selectedServices = services.filter((s) => data.serviceIds.includes(s.id));
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
-      const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const calculatedPrice = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+      const totalPrice = typeof data.totalPrice === 'number' && data.totalPrice >= 0
+        ? data.totalPrice
+        : calculatedPrice;
 
       const startMin = timeToMinutes(data.startTime);
       const endMin = startMin + totalDuration;
