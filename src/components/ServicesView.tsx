@@ -266,12 +266,6 @@ export const ServicesView: React.FC = () => {
                   </span>
                 )}
               </div>
-
-              {/* Hakediş Preview */}
-              <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Personel Hakediş Payı (%50 prim):</span>
-                <span className="font-mono font-bold text-emerald-400">₺{Math.round(service.price * 0.5)} net</span>
-              </div>
             </div>
           </div>
         ))}
