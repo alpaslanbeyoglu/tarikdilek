@@ -42,4 +42,6 @@ export const appointmentsCol = collection(db, 'tarik_dilek_appointments');
 export const customersCol = collection(db, 'tarik_dilek_customers');
 export const barbersCol = collection(db, 'tarik_dilek_barbers');
 export const servicesCol = collection(db, 'tarik_dilek_services');
+export const expensesCol = collection(db, 'tarik_dilek_expenses');
+export const staffPayoutsCol = collection(db, 'tarik_dilek_staff_payouts');
 export const settingsDocRef = doc(db, 'tarik_dilek_settings', 'main');

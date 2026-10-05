@@ -81,6 +81,25 @@ export interface NotificationItem {
   type: 'new_booking' | 'cancellation' | 'status_change' | 'system';
 }
 
+export interface Expense {
+  id: string;
+  category: 'Kira' | 'Malzeme/Kozmetik' | 'Fatura (Elektrik/Su/İnternet)' | 'Mutfak/İkram' | 'Bakım/Onarım' | 'Personel Avans' | 'Diğer';
+  description: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  createdAt: string;
+  barberId?: string; // If advance paid to specific staff
+}
+
+export interface StaffPayout {
+  id: string;
+  barberId: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  note?: string;
+  createdAt: string;
+}
+
 export interface BusinessSettings {
   shopName: string;
   phone: string;

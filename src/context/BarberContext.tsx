@@ -9,6 +9,8 @@ import {
   BusinessSettings,
   UserRole,
   AuthUser,
+  Expense,
+  StaffPayout,
 } from '../types';
 import {
   INITIAL_BARBERS,
@@ -22,7 +24,7 @@ import {
   playNotificationSound,
 } from '../services/notificationService';
 import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import { db, appointmentsCol, barbersCol, customersCol, servicesCol, settingsDocRef } from '../services/firebaseFirestore';
+import { db, appointmentsCol, barbersCol, customersCol, servicesCol, expensesCol, staffPayoutsCol, settingsDocRef } from '../services/firebaseFirestore';
 import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
 import { applyThemeToDOM } from '../utils/themeHelper';
 
@@ -95,6 +97,13 @@ interface BarberContextType {
   triggerTestPushNotification: () => Promise<void>;
   refreshAppointments: () => Promise<boolean>;
   resetToDefaultData: () => void;
+  // Expenses & Staff Payouts Management
+  expenses: Expense[];
+  staffPayouts: StaffPayout[];
+  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
+  deleteExpense: (id: string) => void;
+  addStaffPayout: (payout: Omit<StaffPayout, 'id' | 'createdAt'>) => void;
+  deleteStaffPayout: (id: string) => void;
   // Sync & Loading State
   isLoading: boolean;
   isOnlineSyncing: boolean;
@@ -236,6 +245,56 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     ];
   });
 
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const saved = localStorage.getItem('barber_expenses');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    return [
+      {
+        id: 'exp-1',
+        category: 'Malzeme/Kozmetik',
+        description: 'Sakal Bakım Yağları ve Şampuan Havlu Tedariği',
+        amount: 1250,
+        date: formatLocalDateToISO(new Date()),
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'exp-2',
+        category: 'Mutfak/İkram',
+        description: 'Kahve Çekirdeği, Çay ve İkramlık Alımı',
+        amount: 350,
+        date: formatLocalDateToISO(new Date()),
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  });
+
+  const [staffPayouts, setStaffPayouts] = useState<StaffPayout[]>(() => {
+    const saved = localStorage.getItem('barber_payouts');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    return [
+      {
+        id: 'pay-1',
+        barberId: 'b1',
+        amount: 1000,
+        date: formatLocalDateToISO(new Date()),
+        note: 'Haftalık Avans Ödemesi',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  });
+
   // Auth & Role State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     try {
@@ -332,6 +391,14 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem('barber_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    localStorage.setItem('barber_expenses', JSON.stringify(expenses));
+  }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('barber_payouts', JSON.stringify(staffPayouts));
+  }, [staffPayouts]);
 
   // Login as Master Manager (Password: 1461)
   const loginAsManager = useCallback((pin: string): boolean => {
@@ -1021,6 +1088,52 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     window.location.reload();
   }, []);
 
+  const addExpense = useCallback(async (data: Omit<Expense, 'id' | 'createdAt'>) => {
+    const newExp: Expense = {
+      ...data,
+      id: 'exp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      createdAt: new Date().toISOString(),
+    };
+    setExpenses((prev) => [newExp, ...prev]);
+    try {
+      await setDoc(doc(db, 'tarik_dilek_expenses', newExp.id), cleanFirestoreData(newExp));
+    } catch (e) {
+      console.error('Firestore addExpense error:', e);
+    }
+  }, []);
+
+  const deleteExpense = useCallback(async (id: string) => {
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    try {
+      await deleteDoc(doc(db, 'tarik_dilek_expenses', id));
+    } catch (e) {
+      console.error('Firestore deleteExpense error:', e);
+    }
+  }, []);
+
+  const addStaffPayout = useCallback(async (data: Omit<StaffPayout, 'id' | 'createdAt'>) => {
+    const newPayout: StaffPayout = {
+      ...data,
+      id: 'payout-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      createdAt: new Date().toISOString(),
+    };
+    setStaffPayouts((prev) => [newPayout, ...prev]);
+    try {
+      await setDoc(doc(db, 'tarik_dilek_staff_payouts', newPayout.id), cleanFirestoreData(newPayout));
+    } catch (e) {
+      console.error('Firestore addStaffPayout error:', e);
+    }
+  }, []);
+
+  const deleteStaffPayout = useCallback(async (id: string) => {
+    setStaffPayouts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteDoc(doc(db, 'tarik_dilek_staff_payouts', id));
+    } catch (e) {
+      console.error('Firestore deleteStaffPayout error:', e);
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       barbers,
@@ -1065,6 +1178,12 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       triggerTestPushNotification,
       refreshAppointments,
       resetToDefaultData,
+      expenses,
+      staffPayouts,
+      addExpense,
+      deleteExpense,
+      addStaffPayout,
+      deleteStaffPayout,
       isLoading,
       isOnlineSyncing,
       syncError,
@@ -1109,6 +1228,12 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       triggerTestPushNotification,
       refreshAppointments,
       resetToDefaultData,
+      expenses,
+      staffPayouts,
+      addExpense,
+      deleteExpense,
+      addStaffPayout,
+      deleteStaffPayout,
       isLoading,
       isOnlineSyncing,
       syncError,

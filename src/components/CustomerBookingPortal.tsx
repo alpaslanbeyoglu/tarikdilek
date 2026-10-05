@@ -463,7 +463,7 @@ export const CustomerBookingPortal: React.FC = () => {
             </div>
 
             {/* Bottom Bar: Selection Summary & Proceed */}
-            <div className="sticky bottom-4 z-20 rounded-2xl bg-slate-900/95 border border-slate-800 p-4 backdrop-blur shadow-2xl flex items-center justify-between">
+            <div className="sticky bottom-[72px] md:bottom-4 z-30 rounded-2xl bg-slate-900/95 border border-slate-800 p-3.5 sm:p-4 backdrop-blur-md shadow-2xl flex items-center justify-between">
               <div>
                 <div className="text-xs text-slate-400">
                   Seçilen Hizmetler: <strong className="text-amber-400">{selectedServices.length} işlem</strong>
@@ -561,7 +561,7 @@ export const CustomerBookingPortal: React.FC = () => {
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-4">
+            <div className="sticky bottom-[72px] md:bottom-4 z-30 rounded-2xl bg-slate-900/95 border border-slate-800 p-3.5 sm:p-4 backdrop-blur-md shadow-2xl flex items-center justify-between">
               <button
                 onClick={() => setStep(1)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800"
@@ -688,7 +688,7 @@ export const CustomerBookingPortal: React.FC = () => {
             </div>
 
             {/* Navigation */}
-            <div className="flex items-center justify-between pt-4">
+            <div className="sticky bottom-[72px] md:bottom-4 z-30 rounded-2xl bg-slate-900/95 border border-slate-800 p-3.5 sm:p-4 backdrop-blur-md shadow-2xl flex items-center justify-between">
               <button
                 onClick={() => setStep(2)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800"
