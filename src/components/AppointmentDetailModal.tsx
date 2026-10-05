@@ -53,6 +53,7 @@ export const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
   const [justUpdatedStatus, setJustUpdatedStatus] = useState<string | null>(null);
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [editPriceValue, setEditPriceValue] = useState<number>(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!appointment) return null;
 
@@ -129,11 +130,9 @@ export const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
     setIsEditingTime(false);
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Bu randevuyu silmek istediğinizden emin misiniz?')) {
-      deleteAppointment(currentAppointment.id);
-      onClose();
-    }
+  const handleConfirmDelete = () => {
+    deleteAppointment(currentAppointment.id);
+    onClose();
   };
 
   return (
@@ -522,17 +521,53 @@ export const AppointmentDetailModal: React.FC<AppointmentDetailModalProps> = ({
           </div>
         )}
 
+        {/* Delete Confirmation Box */}
+        {showDeleteConfirm && (
+          <div className="mb-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-3 animate-in fade-in">
+            <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
+              <Trash2 className="w-4 h-4 shrink-0" />
+              <span>Bu randevu kaydı kalıcı olarak silinecektir</span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              <strong>{currentAppointment.customerName}</strong> ({currentAppointment.date} saat {currentAppointment.startTime}) randevusunu silmek istediğinizden emin misiniz?
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20"
+              >
+                Evet, Randevuyu Sil
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Bottom Actions */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors text-xs font-semibold"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Randevuyu Sil</span>
-          </button>
+          {!isStaff && !showDeleteConfirm ? (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors text-xs font-semibold"
+              title="Randevu kaydını sil"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Randevuyu Sil</span>
+            </button>
+          ) : (
+            <div />
+          )}
 
           <button
+            type="button"
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
           >

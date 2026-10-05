@@ -299,290 +299,412 @@ export const BarbersView: React.FC = () => {
         </div>
       )}
 
-      {/* FEATURED STAFF PROFILE BANNER (FOR LOGGED-IN STAFF) */}
-      {isStaff && myProfile && (
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/40 shadow-2xl space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div
+      {/* 1. EĞER PERSONEL GİRİŞ YAPTIYSA: SADECE KENDİ PROFİLİ GÖRÜNÜR VE DÜZENLENEBİLİR */}
+      {isStaff ? (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl backdrop-blur flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-500" />
+                <h2 className="text-lg font-bold text-white">Profilim & Kişisel Bilgilerim</h2>
+                <span className="text-[10px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30 font-semibold font-mono">
+                  ✂️ Personel Hesabı
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Online randevu sisteminde müşterilerin göreceği profil fotoğrafınızı, unvanınızı, telefonunuzu ve mesai saatlerinizi buradan güncelleyebilirsiniz.
+              </p>
+            </div>
+
+            {myProfile && (
+              <button
                 onClick={() => openEditModal(myProfile)}
-                className="relative group/myavatar cursor-pointer shrink-0"
-                title="Fotoğrafımı ve Profilimi Düzenle"
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md flex items-center gap-2 shrink-0"
               >
-                <img
-                  src={getAssetUrl(myProfile.avatar)}
-                  alt={myProfile.name}
-                  referrerPolicy="no-referrer"
-                  className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-500/60 group-hover/myavatar:border-amber-400 transition-colors shadow-lg"
-                />
-                <div className="absolute inset-0 bg-slate-950/60 rounded-2xl opacity-0 group-hover/myavatar:opacity-100 flex items-center justify-center text-amber-400 font-bold text-xs transition-opacity">
-                  <Camera className="w-6 h-6" />
+                <Camera className="w-4 h-4" />
+                <span>Fotoğrafımı & Bilgilerimi Düzenle</span>
+              </button>
+            )}
+          </div>
+
+          {/* Dedicated Profile Card */}
+          {myProfile ? (
+            <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
+              {/* Top Photo & Bio Card */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-slate-800">
+                <div
+                  onClick={() => openEditModal(myProfile)}
+                  className="relative group/avatar cursor-pointer shrink-0"
+                  title="Fotoğrafımı Değiştir"
+                >
+                  <img
+                    src={getAssetUrl(myProfile.avatar)}
+                    alt={myProfile.name}
+                    referrerPolicy="no-referrer"
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-2 border-amber-500/40 group-hover/avatar:border-amber-400 transition-colors shadow-2xl"
+                  />
+                  <div className="absolute inset-0 bg-slate-950/60 rounded-3xl opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center text-amber-400 font-bold text-xs transition-opacity flex-col gap-1">
+                    <Camera className="w-6 h-6" />
+                    <span>Değiştir</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="text-xl font-bold text-white">{myProfile.name}</h3>
+                    <span className="text-xs text-amber-400 font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      {myProfile.title}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono">
+                      {myProfile.experienceYears} Yıl Deneyim
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                    {myProfile.bio || 'Modern saç ve sakal teknikleri uzmanı.'}
+                  </p>
+
+                  <div className="flex items-center gap-3 pt-1 text-xs text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-amber-500" />
+                      <strong className="text-slate-200 font-mono">{myProfile.phone}</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-white">{myProfile.name}</h2>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
-                    Profilim
+              {/* Grid of Profile Attributes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Giriş PIN Kodu */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Giriş PIN Kodu</span>
+                    </span>
+                    <button
+                      onClick={() => openEditModal(myProfile)}
+                      className="text-[10px] text-amber-400 hover:underline"
+                    >
+                      Değiştir
+                    </button>
+                  </div>
+                  <div className="font-mono text-base font-bold text-white tracking-widest">
+                    {myProfile.pin || '1234'}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">Personel paneline giriş şifreniz</span>
+                </div>
+
+                {/* Prim / Hakediş Oranı (Locked) */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Prim / Hakediş Oranı</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                      🔒 Yönetici
+                    </span>
+                  </div>
+                  <div className="font-mono text-base font-extrabold text-amber-400">
+                    %{myProfile.commissionRate ?? 50}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">Sadece salon yöneticisi değiştirebilir</span>
+                </div>
+
+                {/* Mesai Saatleri */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Mesai & Mola</span>
+                    </span>
+                    <button
+                      onClick={() => openEditModal(myProfile)}
+                      className="text-[10px] text-amber-400 hover:underline"
+                    >
+                      Düzenle
+                    </button>
+                  </div>
+                  <div className="font-mono text-sm font-bold text-white">
+                    {myProfile.workingHours.start} - {myProfile.workingHours.end}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">
+                    Mola: {myProfile.workingHours.lunchStart} - {myProfile.workingHours.lunchEnd}
                   </span>
                 </div>
-                <p className="text-xs text-amber-400 font-medium">{myProfile.title}</p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-md line-clamp-2">
-                  {myProfile.bio || 'Saç ve sakal şekillendirme uzmanı.'}
-                </p>
+
+                {/* Haftalık İzin Günü */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Haftalık İzin</span>
+                    </span>
+                    <button
+                      onClick={() => openEditModal(myProfile)}
+                      className="text-[10px] text-amber-400 hover:underline"
+                    >
+                      Düzenle
+                    </button>
+                  </div>
+                  <div className="text-sm font-bold text-rose-400 truncate">
+                    {myProfile.daysOff.length === 0
+                      ? 'İzin günü yok'
+                      : myProfile.daysOff.map((d) => daysLabels[d]).join(', ')}
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">Bu günlerde randevu alınamaz</span>
+                </div>
               </div>
             </div>
-
-            <button
-              onClick={() => openEditModal(myProfile)}
-              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-lg flex items-center gap-2 shrink-0"
-            >
-              <Camera className="w-4 h-4" />
-              <span>Profil Fotoğrafımı & Bilgilerimi Düzenle</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
-        <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-amber-500" />
-            <span>Personel Kadrosu ({barbers.length} Personel)</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {activeCount} aktif çalışan · Yeni personel ekleyin, silin, fotoğraflarını ve mesai saatlerini güncelleyin
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Personel ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-36 sm:w-48 rounded-xl bg-slate-950 border border-slate-800 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-            />
-          </div>
-
-          {!isStaff && (
-            <button
-              onClick={openAddModal}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shrink-0"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Yeni Personel Ekle</span>
-            </button>
+          ) : (
+            <div className="p-12 text-center text-slate-400 bg-slate-900 rounded-3xl border border-slate-800">
+              Profil bilgileriniz yükleniyor...
+            </div>
           )}
         </div>
-      </div>
-
-      {/* Barbers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredBarbers.map((barber) => {
-          const barberApts = appointments.filter((a) => a.barberId === barber.id);
-          const completedApts = barberApts.filter((a) => a.status === 'completed' || a.status === 'confirmed');
-          const completedCount = completedApts.length;
-          const totalRevenue = completedApts.reduce((sum, a) => {
-            if (typeof a.totalPrice === 'number' && a.totalPrice > 0) return sum + a.totalPrice;
-            const sPrice = (a.serviceIds || []).reduce((sSum, sId) => {
-              const s = services.find((item) => item.id === sId);
-              return sSum + (s?.price || 0);
-            }, 0);
-            return sum + sPrice;
-          }, 0);
-          const earnedHakedis = Math.round((totalRevenue * (barber.commissionRate ?? 50)) / 100);
-
-          return (
-            <div
-              key={barber.id}
-              className={`rounded-2xl border p-5 transition-all duration-200 flex flex-col justify-between group ${
-                barber.active
-                  ? 'bg-slate-900/80 border-slate-800 hover:border-slate-700 shadow-md'
-                  : 'bg-slate-950/50 border-slate-900 opacity-60'
-              }`}
-            >
-              <div>
-                {/* Header with Photo & Actions */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative group/avatar cursor-pointer" onClick={() => openEditModal(barber)}>
-                      <img
-                        src={getAssetUrl(barber.avatar)}
-                        alt={barber.name}
-                        referrerPolicy="no-referrer"
-                        className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-500/30 group-hover/avatar:border-amber-500 transition-colors"
-                      />
-                      <span
-                        className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${
-                          barber.active ? 'bg-emerald-500' : 'bg-slate-500'
-                        }`}
-                        title={barber.active ? 'Aktif Çalışıyor' : 'Pasif'}
-                      />
-                      <div className="absolute inset-0 bg-slate-950/60 rounded-2xl opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center text-[10px] text-white font-semibold transition-opacity">
-                        Değiştir
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                        <span>{barber.name}</span>
-                        {barber.id === 'b1' && (
-                          <span className="text-[9px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 rounded">
-                            Kurucu
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-xs text-amber-400 font-medium">{barber.title}</p>
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1 text-amber-400">
-                          <Star className="w-3 h-3 fill-amber-400" />
-                          <span>{barber.rating}</span>
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span>{barber.experienceYears} yıl deneyim</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEditModal(barber)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                      title="Profili & Fotoğrafı Düzenle"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      onClick={() => toggleBarberActive(barber.id)}
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        barber.active
-                          ? 'text-emerald-400 hover:bg-emerald-500/10'
-                          : 'text-slate-500 hover:bg-slate-800'
-                      }`}
-                      title={barber.active ? 'Aktif (Pasife Al)' : 'Pasif (Aktife Al)'}
-                    >
-                      <Power className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      onClick={() => setDeleteConfirmId(barber.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                      title="Personeli Çıkar / Sil"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-slate-500" />
-                      <span>Telefon:</span>
-                    </span>
-                    <span className="font-mono text-slate-200">{barber.phone}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="w-3 h-3 text-slate-500" />
-                      <span>Mesai:</span>
-                    </span>
-                    <span className="font-mono text-slate-200">
-                      {barber.workingHours.start} - {barber.workingHours.end}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="w-3 h-3 text-slate-500" />
-                      <span>İzin Günü:</span>
-                    </span>
-                    <span className="text-rose-400 font-medium">
-                      {barber.daysOff.length === 0
-                        ? 'Haftalık izin yok'
-                        : barber.daysOff.map((d) => daysLabels[d]).join(', ')}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <KeyRound className="w-3 h-3 text-slate-500" />
-                      <span>Giriş PIN Kodu:</span>
-                    </span>
-                    <span className="font-mono text-amber-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                      {barber.pin || '1234'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>Prim / Hakediş:</span>
-                    </span>
-                    <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                      %{barber.commissionRate ?? 50}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Actions */}
-              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                <div className="flex flex-col gap-0.5 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      <strong className="text-white">{barberApts.length}</strong> randevu
-                    </span>
-                    <span aria-hidden="true" className="text-slate-600">·</span>
-                    <span className="text-[11px] text-emerald-400 font-mono">
-                      <strong>{completedCount}</strong> bitti
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    Ciro: <strong className="text-white">₺{totalRevenue.toLocaleString('tr-TR')}</strong>
-                    <span className="mx-1 text-slate-600">|</span>
-                    Hakediş: <strong className="text-amber-400">₺{earnedHakedis.toLocaleString('tr-TR')}</strong>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => openEditModal(barber)}
-                    className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1"
-                  >
-                    <span>Düzenle</span>
-                    <Edit2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
+      ) : (
+        /* 2. YÖNETİCİ GÖRÜNÜMÜ: SALON YÖNETİCİSİ TAM HAKİMİYET */
+        <>
+          {/* Top Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-500" />
+                <span>Personel Kadrosu & Yetki Yönetimi ({barbers.length} Personel)</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {activeCount} aktif çalışan · Yeni personel ekleyin, silin, fotoğraflarını, prim oranlarını ve mesai saatlerini yönetin
+              </p>
             </div>
-          );
-        })}
 
-        {/* Big Add Staff Card */}
-        <button
-          onClick={openAddModal}
-          className="rounded-2xl border-2 border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-900/30 hover:bg-slate-900/60 p-6 flex flex-col items-center justify-center text-center transition-all group min-h-[260px]"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <Plus className="w-6 h-6 stroke-[2.5]" />
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Personel ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-36 sm:w-48 rounded-xl bg-slate-950 border border-slate-800 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <button
+                onClick={openAddModal}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shrink-0"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>Yeni Personel Ekle</span>
+              </button>
+            </div>
           </div>
-          <h4 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
-            Yeni Personel Ekle
-          </h4>
-          <p className="text-xs text-slate-400 max-w-xs mt-1">
-            Kadronuza yeni bir saç/sakal stilisti veya berber ekleyin, online randevuları başlatın
-          </p>
-        </button>
-      </div>
+
+          {/* Barbers Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredBarbers.map((barber) => {
+              const barberApts = appointments.filter((a) => a.barberId === barber.id);
+              const completedApts = barberApts.filter((a) => a.status === 'completed' || a.status === 'confirmed');
+              const completedCount = completedApts.length;
+              const totalRevenue = completedApts.reduce((sum, a) => {
+                if (typeof a.totalPrice === 'number' && a.totalPrice > 0) return sum + a.totalPrice;
+                const sPrice = (a.serviceIds || []).reduce((sSum, sId) => {
+                  const s = services.find((item) => item.id === sId);
+                  return sSum + (s?.price || 0);
+                }, 0);
+                return sum + sPrice;
+              }, 0);
+              const earnedHakedis = Math.round((totalRevenue * (barber.commissionRate ?? 50)) / 100);
+
+              return (
+                <div
+                  key={barber.id}
+                  className={`rounded-2xl border p-5 transition-all duration-200 flex flex-col justify-between group ${
+                    barber.active
+                      ? 'bg-slate-900/80 border-slate-800 hover:border-slate-700 shadow-md'
+                      : 'bg-slate-950/50 border-slate-900 opacity-60'
+                  }`}
+                >
+                  <div>
+                    {/* Header with Photo & Actions */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative group/avatar cursor-pointer" onClick={() => openEditModal(barber)}>
+                          <img
+                            src={getAssetUrl(barber.avatar)}
+                            alt={barber.name}
+                            referrerPolicy="no-referrer"
+                            className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-500/30 group-hover/avatar:border-amber-500 transition-colors"
+                          />
+                          <span
+                            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${
+                              barber.active ? 'bg-emerald-500' : 'bg-slate-500'
+                            }`}
+                            title={barber.active ? 'Aktif Çalışıyor' : 'Pasif'}
+                          />
+                          <div className="absolute inset-0 bg-slate-950/60 rounded-2xl opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center text-[10px] text-white font-semibold transition-opacity">
+                            Değiştir
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                            <span>{barber.name}</span>
+                            {barber.id === 'b1' && (
+                              <span className="text-[9px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 rounded">
+                                Kurucu
+                              </span>
+                            )}
+                          </h3>
+                          <p className="text-xs text-amber-400 font-medium">{barber.title}</p>
+                          <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+                            <span className="flex items-center gap-1 text-amber-400">
+                              <Star className="w-3 h-3 fill-amber-400" />
+                              <span>{barber.rating}</span>
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>{barber.experienceYears} yıl deneyim</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEditModal(barber)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                          title="Profili & Fotoğrafı Düzenle"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => toggleBarberActive(barber.id)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            barber.active
+                              ? 'text-emerald-400 hover:bg-emerald-500/10'
+                              : 'text-slate-500 hover:bg-slate-800'
+                          }`}
+                          title={barber.active ? 'Aktif (Pasife Al)' : 'Pasif (Aktife Al)'}
+                        >
+                          <Power className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => setDeleteConfirmId(barber.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                          title="Personeli Çıkar / Sil"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2 text-xs">
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Phone className="w-3 h-3 text-slate-500" />
+                          <span>Telefon:</span>
+                        </span>
+                        <span className="font-mono text-slate-200">{barber.phone}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          <span>Mesai:</span>
+                        </span>
+                        <span className="font-mono text-slate-200">
+                          {barber.workingHours.start} - {barber.workingHours.end}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-slate-500" />
+                          <span>İzin Günü:</span>
+                        </span>
+                        <span className="text-rose-400 font-medium">
+                          {barber.daysOff.length === 0
+                            ? 'Haftalık izin yok'
+                            : barber.daysOff.map((d) => daysLabels[d]).join(', ')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <KeyRound className="w-3 h-3 text-slate-500" />
+                          <span>Giriş PIN Kodu:</span>
+                        </span>
+                        <span className="font-mono text-amber-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                          {barber.pin || '1234'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>Prim / Hakediş:</span>
+                        </span>
+                        <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          %{barber.commissionRate ?? 50}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                    <div className="flex flex-col gap-0.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          <strong className="text-white">{barberApts.length}</strong> randevu
+                        </span>
+                        <span aria-hidden="true" className="text-slate-600">·</span>
+                        <span className="text-[11px] text-emerald-400 font-mono">
+                          <strong>{completedCount}</strong> bitti
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        Ciro: <strong className="text-white">₺{totalRevenue.toLocaleString('tr-TR')}</strong>
+                        <span className="mx-1 text-slate-600">|</span>
+                        Hakediş: <strong className="text-amber-400">₺{earnedHakedis.toLocaleString('tr-TR')}</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => openEditModal(barber)}
+                        className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1"
+                      >
+                        <span>Düzenle</span>
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Big Add Staff Card */}
+            <button
+              onClick={openAddModal}
+              className="rounded-2xl border-2 border-dashed border-slate-800 hover:border-amber-500/50 bg-slate-900/30 hover:bg-slate-900/60 p-6 flex flex-col items-center justify-center text-center transition-all group min-h-[260px]"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <Plus className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">
+                Yeni Personel Ekle
+              </h4>
+              <p className="text-xs text-slate-400 max-w-xs mt-1">
+                Kadronuza yeni bir saç/sakal stilisti veya berber ekleyin, online randevuları başlatın
+              </p>
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && barberToDelete && (

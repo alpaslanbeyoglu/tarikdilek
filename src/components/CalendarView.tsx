@@ -25,6 +25,7 @@ import {
   XCircle,
   MoreHorizontal,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { buildCustomerConfirmationWhatsAppUrl } from '../services/notificationService';
 import { formatISODateToTurkish, formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
@@ -36,6 +37,7 @@ export const CalendarView: React.FC = () => {
     settings,
     appointments,
     updateAppointmentStatus,
+    deleteAppointment,
     refreshAppointments,
     selectedDate,
     setSelectedDate,
@@ -52,6 +54,7 @@ export const CalendarView: React.FC = () => {
 
   const [viewType, setViewType] = useState<'list' | 'timeline'>('list');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
@@ -694,6 +697,16 @@ export const CalendarView: React.FC = () => {
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
+
+                      {!isStaff && (
+                        <button
+                          onClick={() => setAppointmentToDelete(apt)}
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+                          title="Randevuyu Sil"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -835,6 +848,39 @@ export const CalendarView: React.FC = () => {
           appointment={selectedAppointment}
           onClose={() => setSelectedAppointment(null)}
         />
+      )}
+
+      {appointmentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-3">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-bold text-white">Randevuyu Sil</h4>
+            <p className="text-xs text-slate-400 my-3 leading-relaxed">
+              <strong>{appointmentToDelete.customerName}</strong> ({appointmentToDelete.date} saat {appointmentToDelete.startTime}) randevusunu silmek istediğinize emin misiniz?
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAppointmentToDelete(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteAppointment(appointmentToDelete.id);
+                  setAppointmentToDelete(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20"
+              >
+                Evet, Sil
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {isNewModalOpen && (

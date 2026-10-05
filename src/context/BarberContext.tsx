@@ -23,7 +23,7 @@ import {
   sendInstantNotification,
   playNotificationSound,
 } from '../services/notificationService';
-import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, query, where, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db, appointmentsCol, barbersCol, customersCol, servicesCol, expensesCol, staffPayoutsCol, settingsDocRef } from '../services/firebaseFirestore';
 import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
 import { applyThemeToDOM } from '../utils/themeHelper';
@@ -355,7 +355,12 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const currentUserRole: UserRole = currentUser?.role || null;
+  // Effective role: If explicitly staff -> staff; if active in manager mode -> admin (manager has complete control)
+  const currentUserRole: UserRole = currentUser?.role
+    ? currentUser.role
+    : activeMode === 'manager'
+    ? 'admin'
+    : null;
   const loggedInBarberId: string | null = currentUser?.barberId || null;
 
   // Loading & Sync Debugging States
@@ -479,22 +484,25 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const newAptsToNotify: Appointment[] = [];
 
             snapshot.docChanges().forEach((change) => {
-              const data = change.doc.data() as Appointment;
-              if (data && data.id) {
+              const rawData = change.doc.data() as Appointment;
+              const effectiveId = change.doc.id || rawData?.id;
+              if (effectiveId) {
+                const data: Appointment = { ...rawData, id: effectiveId };
                 if (change.type === 'added') {
-                  if (!isFirstAptSnapshotRef.current && !knownAptIdsRef.current.has(data.id)) {
+                  if (!isFirstAptSnapshotRef.current && !knownAptIdsRef.current.has(effectiveId)) {
                     newAptsToNotify.push(data);
                   }
-                  knownAptIdsRef.current.add(data.id);
+                  knownAptIdsRef.current.add(effectiveId);
                 }
               }
             });
 
             snapshot.forEach((d) => {
-              const data = d.data() as Appointment;
-              if (data && data.id) {
-                cloudApts.push(data);
-                knownAptIdsRef.current.add(data.id);
+              const rawData = d.data() as Appointment;
+              const effectiveId = d.id || rawData?.id;
+              if (effectiveId) {
+                cloudApts.push({ ...rawData, id: effectiveId });
+                knownAptIdsRef.current.add(effectiveId);
               }
             });
 
@@ -521,12 +529,25 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               });
             }
 
-            setAppointments((prev) => {
-              const map = new Map<string, Appointment>();
-              prev.forEach((a) => map.set(a.id, a));
-              cloudApts.forEach((a) => map.set(a.id, a));
-              return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-            });
+            if (cloudApts.length > 0) {
+              setAppointments(cloudApts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+              try {
+                localStorage.setItem('barber_appointments', JSON.stringify(cloudApts));
+              } catch (e) {
+                console.warn('localStorage save warning:', e);
+              }
+            } else if (isFirstAptSnapshotRef.current) {
+              isFirstAptSnapshotRef.current = false;
+              INITIAL_APPOINTMENTS.forEach((apt) => {
+                setDoc(doc(db, 'tarik_dilek_appointments', apt.id), cleanFirestoreData(apt)).catch(console.error);
+              });
+              setAppointments(INITIAL_APPOINTMENTS);
+            } else {
+              setAppointments([]);
+              try {
+                localStorage.setItem('barber_appointments', JSON.stringify([]));
+              } catch (e) {}
+            }
             setIsOnlineSyncing(true);
             setIsLoading(false);
             setSyncError(null);
@@ -586,8 +607,11 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             const cloudCustomers: Customer[] = [];
             snapshot.forEach((d) => {
-              const data = d.data() as Customer;
-              if (data && data.id) cloudCustomers.push(data);
+              const rawData = d.data() as Customer;
+              const effectiveId = d.id || rawData?.id;
+              if (effectiveId) {
+                cloudCustomers.push({ ...rawData, id: effectiveId });
+              }
             });
             setCustomers(cloudCustomers);
             setIsOnlineSyncing(true);
@@ -691,8 +715,9 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const aptsSnap = await getDocs(appointmentsCol);
       const cloudApts: Appointment[] = [];
       aptsSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
-        const data = d.data() as Appointment;
-        if (data && data.id) cloudApts.push(data);
+        const rawData = d.data() as Appointment;
+        const effectiveId = d.id || rawData?.id;
+        if (effectiveId) cloudApts.push({ ...rawData, id: effectiveId });
       });
       if (cloudApts.length > 0) {
         setAppointments(cloudApts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
@@ -702,8 +727,9 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const barbersSnap = await getDocs(barbersCol);
       const cloudBarbers: Barber[] = [];
       barbersSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
-        const data = d.data() as Barber;
-        if (data && data.id) cloudBarbers.push(data);
+        const rawData = d.data() as Barber;
+        const effectiveId = d.id || rawData?.id;
+        if (effectiveId) cloudBarbers.push({ ...rawData, id: effectiveId });
       });
       if (cloudBarbers.length > 0) {
         setBarbers(cloudBarbers);
@@ -713,8 +739,9 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const custSnap = await getDocs(customersCol);
       const cloudCust: Customer[] = [];
       custSnap.forEach((d: QueryDocumentSnapshot<DocumentData>) => {
-        const data = d.data() as Customer;
-        if (data && data.id) cloudCust.push(data);
+        const rawData = d.data() as Customer;
+        const effectiveId = d.id || rawData?.id;
+        if (effectiveId) cloudCust.push({ ...rawData, id: effectiveId });
       });
       setCustomers(cloudCust);
 
@@ -942,11 +969,35 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const deleteAppointment = useCallback(async (id: string) => {
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
+    // 1. Immediately remove from local state and update localStorage
+    setAppointments((prev) => {
+      const next = prev.filter((a) => a.id !== id);
+      try {
+        localStorage.setItem('barber_appointments', JSON.stringify(next));
+      } catch (e) {
+        console.warn('localStorage error:', e);
+      }
+      return next;
+    });
+
+    // 2. Prevent re-notification in this session
+    knownAptIdsRef.current.delete(id);
+
+    // 3. Delete from Firestore by document ID
     try {
       await deleteDoc(doc(db, 'tarik_dilek_appointments', id));
     } catch (e) {
-      console.error('Firestore delete error:', e);
+      console.warn('Firestore direct deleteDoc error (fallback to query):', e);
+    }
+
+    // 4. Secondary fallback: delete any doc that has field id == id
+    try {
+      const q = query(appointmentsCol, where('id', '==', id));
+      const snap = await getDocs(q);
+      const promises = snap.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(promises);
+    } catch (e) {
+      console.warn('Firestore query delete error:', e);
     }
   }, []);
 
@@ -1053,11 +1104,32 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const deleteCustomer = useCallback(async (id: string) => {
-    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    // 1. Immediately remove from local state and update localStorage
+    setCustomers((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      try {
+        localStorage.setItem('barber_customers', JSON.stringify(next));
+      } catch (e) {
+        console.warn('localStorage error:', e);
+      }
+      return next;
+    });
+
+    // 2. Direct document delete
     try {
       await deleteDoc(doc(db, 'tarik_dilek_customers', id));
     } catch (e) {
-      console.error('Firestore deleteCustomer error:', e);
+      console.warn('Firestore direct deleteCustomer error (fallback to query):', e);
+    }
+
+    // 3. Fallback: also delete any doc that has field id == id
+    try {
+      const q = query(customersCol, where('id', '==', id));
+      const snap = await getDocs(q);
+      const promises = snap.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(promises);
+    } catch (e) {
+      console.warn('Firestore query delete customer error:', e);
     }
   }, []);
 

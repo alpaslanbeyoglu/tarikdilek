@@ -16,11 +16,14 @@ import {
 } from 'lucide-react';
 
 export const CustomersView: React.FC = () => {
-  const { customers, appointments, addCustomer, updateCustomer, deleteCustomer, settings } = useBarber();
+  const { customers, appointments, addCustomer, updateCustomer, deleteCustomer, settings, currentUserRole } = useBarber();
+
+  const isStaff = currentUserRole === 'staff';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [deleteConfirmCustomer, setDeleteConfirmCustomer] = useState<Customer | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -60,10 +63,8 @@ export const CustomersView: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleDeleteCustomer = (id: string, name: string) => {
-    if (window.confirm(`"${name}" isimli müşteri kaydını silmek istediğinize emin misiniz?`)) {
-      deleteCustomer(id);
-    }
+  const handleDeleteCustomer = (c: Customer) => {
+    setDeleteConfirmCustomer(c);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -235,13 +236,15 @@ export const CustomersView: React.FC = () => {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
 
-                          <button
-                            onClick={() => handleDeleteCustomer(cust.id, cust.name)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title="Müşteriyi Sil"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {!isStaff && (
+                            <button
+                              onClick={() => setDeleteConfirmCustomer(cust)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              title="Müşteriyi Sil"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -338,23 +341,76 @@ export const CustomersView: React.FC = () => {
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md transition-colors"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{editingCustomer ? 'Güncelle' : 'Kaydet'}</span>
-                </button>
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
+                {!isStaff && editingCustomer ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const toDelete = editingCustomer;
+                      setIsAddModalOpen(false);
+                      setDeleteConfirmCustomer(toDelete);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors text-xs font-semibold"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Müşteriyi Sil</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    Vazgeç
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md transition-colors"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{editingCustomer ? 'Güncelle' : 'Kaydet'}</span>
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmCustomer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-3">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-bold text-white">Müşteri Kaydını Sil</h4>
+            <p className="text-xs text-slate-400 my-3 leading-relaxed">
+              <strong>{deleteConfirmCustomer.name}</strong> isimli müşterinin tüm geçmiş kayıtları silinecektir. Emin misiniz?
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmCustomer(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteCustomer(deleteConfirmCustomer.id);
+                  setDeleteConfirmCustomer(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20"
+              >
+                Evet, Sil
+              </button>
+            </div>
           </div>
         </div>
       )}
