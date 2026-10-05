@@ -116,8 +116,9 @@ export async function sendInstantNotification(title: string, body: string, appoi
             body,
             icon: '/pwa-192x192.png',
             badge: '/icon.svg',
-            vibrate: [200, 100, 200, 100, 200],
-            data: { appointmentId, url: '/' },
+            vibrate: [300, 100, 300, 100, 500],
+            requireInteraction: true,
+            data: { appointmentId, url: '/#admin' },
           };
           registration.showNotification(title, opts as NotificationOptions);
           return;

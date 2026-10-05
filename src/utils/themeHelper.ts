@@ -6,7 +6,7 @@
  * 3. 'sapphire' (Safir & Gece Mavisi - Royal VIP Executive)
  */
 
-export type ThemeId = 'gold' | 'emerald' | 'sapphire';
+export type ThemeId = 'gold' | 'emerald' | 'sapphire' | 'light';
 
 export interface ThemeConfig {
   id: ThemeId;
@@ -49,6 +49,16 @@ export const SALON_THEMES: Record<ThemeId, ThemeConfig> = {
     accentHex: '#818cf8',
     cardBorder: 'border-indigo-500/40',
     previewClass: 'bg-indigo-500 border-indigo-400 text-indigo-400',
+  },
+  light: {
+    id: 'light',
+    name: 'Açık Lüks Fildişi',
+    subtitle: 'Aydınlık beyaz zemin, şık gündüz salon konsepti',
+    badge: '☀️ Açık & Aydınlık',
+    primaryHex: '#d97706',
+    accentHex: '#f59e0b',
+    cardBorder: 'border-amber-600/40',
+    previewClass: 'bg-amber-600 border-amber-500 text-amber-600',
   },
 };
 

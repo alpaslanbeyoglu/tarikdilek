@@ -1,5 +1,5 @@
-// Service Worker for Makas & Jilet Barbershop
-const CACHE_NAME = 'barber-pwa-v2';
+// Service Worker for Tarık Dilek Erkek Kuaförü PWA
+const CACHE_NAME = 'barber-pwa-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -32,15 +32,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Handle push notifications
+// Handle push notifications when page/Safari is closed (background)
 self.addEventListener('push', (event) => {
   let data = {
-    title: 'Yeni Müşteri Randevusu!',
+    title: '💈 Yeni Müşteri Randevusu!',
     body: 'Bir müşteri online randevu aldı. İncelemek için tıklayın.',
     icon: './pwa-192x192.png',
     badge: './icon.svg',
     tag: 'barber-appointment-' + Date.now(),
-    url: './'
+    url: './#admin'
   };
 
   if (event.data) {
@@ -56,14 +56,15 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: data.icon || './pwa-192x192.png',
     badge: './icon.svg',
-    vibrate: [200, 100, 200, 100, 200],
+    vibrate: [300, 100, 300, 100, 500, 100, 300],
+    requireInteraction: true, // Keeps notification visible on lock screen until clicked
     data: {
-      url: data.url || './',
+      url: data.url || './#admin',
       appointmentId: data.appointmentId
     },
     actions: [
-      { action: 'open', title: 'Randevuyu Aç' },
-      { action: 'close', title: 'Kapat' }
+      { action: 'open', title: 'Randevuyu Aç 📂' },
+      { action: 'close', title: 'Kapat ✖' }
     ]
   };
 
@@ -72,7 +73,7 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Handle notification click
+// Handle notification click when phone screen is locked or app is closed
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
@@ -80,7 +81,7 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  const targetUrl = (event.notification.data && event.notification.data.url) || './#admin';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -100,19 +101,20 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Message listener to trigger instant local notification from client
+// Message listener to trigger background system notification from client or sync
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, appointmentId } = event.data;
-    self.registration.showNotification(title || 'Yeni Randevu Talebi!', {
-      body: body || 'Online randevu oluşturuldu.',
-      icon: '/pwa-192x192.png',
-      badge: '/icon.svg',
-      vibrate: [200, 100, 200, 100, 200],
-      data: { url: '/', appointmentId },
+    self.registration.showNotification(title || '💈 Yeni Müşteri Randevusu!', {
+      body: body || 'Online randevu oluşturuldu. İncelemek için dokunun.',
+      icon: './pwa-192x192.png',
+      badge: './icon.svg',
+      vibrate: [300, 100, 300, 100, 500],
+      requireInteraction: true,
+      data: { url: './#admin', appointmentId },
       actions: [
-        { action: 'open', title: 'Randevuyu İncele' },
-        { action: 'close', title: 'Tamam' }
+        { action: 'open', title: 'Randevuyu İncele 📂' },
+        { action: 'close', title: 'Tamam ✖' }
       ]
     });
   }

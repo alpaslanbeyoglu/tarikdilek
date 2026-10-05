@@ -25,6 +25,7 @@ import {
   Palette,
 } from 'lucide-react';
 import { SALON_THEMES, ThemeId } from '../utils/themeHelper';
+import { SafariNotificationGuide } from './SafariNotificationGuide';
 import {
   isPushNotificationSupported,
   getNotificationPermission,
@@ -274,8 +275,8 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 Theme Options Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 4 Theme Options Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {(Object.keys(SALON_THEMES) as ThemeId[]).map((key) => {
             const theme = SALON_THEMES[key];
             const isSelected = (settings.themeId || 'gold') === key;
@@ -449,6 +450,9 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* SAFARI & IPHONE BACKGROUND NOTIFICATION SETUP GUIDE */}
+      <SafariNotificationGuide />
 
       {/* SECTION 2: WHATSAPP INSTANT MANAGER NOTIFICATION */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4 shadow-xl">

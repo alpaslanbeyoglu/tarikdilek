@@ -95,5 +95,5 @@ export interface BusinessSettings {
   soundEnabled: boolean;
   pushEnabled: boolean;
   slotIntervalMinutes: number;
-  themeId?: 'gold' | 'emerald' | 'sapphire';
+  themeId?: 'gold' | 'emerald' | 'sapphire' | 'light';
 }
