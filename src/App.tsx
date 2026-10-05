@@ -142,22 +142,20 @@ function MainApp() {
           <span className="text-[10px]">Randevu</span>
         </button>
 
-        {!isStaff && (
-          <button
-            onClick={() => {
-              setCurrentTab('barbers');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-all ${
-              currentTab === 'barbers'
-                ? 'text-amber-400 font-bold scale-105'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span className="text-[10px]">Personel</span>
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setCurrentTab('barbers');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-all ${
+            currentTab === 'barbers'
+              ? 'text-amber-400 font-bold scale-105'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span className="text-[10px]">{isStaff ? 'Profilim' : 'Personel'}</span>
+        </button>
 
         {!isStaff && (
           <button

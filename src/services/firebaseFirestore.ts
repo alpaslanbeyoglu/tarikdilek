@@ -21,9 +21,9 @@ const dbId = (firebaseConfig as any).firestoreDatabaseId && (firebaseConfig as a
   ? (firebaseConfig as any).firestoreDatabaseId
   : undefined;
 
-// Initialize Firestore targeting the specific database ID with long-polling auto-detection
+// Initialize Firestore targeting the specific database ID with forced long-polling for stable iframe/web preview networking
 export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
 }, dbId);
 
 async function testConnection() {

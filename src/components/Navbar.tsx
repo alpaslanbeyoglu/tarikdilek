@@ -119,20 +119,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Barbers / Staff */}
-          {!isStaff && (
-            <button
-              onClick={() => setCurrentTab('barbers')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                currentTab === 'barbers'
-                  ? 'bg-amber-500 text-slate-950 shadow-md font-bold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Users className="h-3.5 w-3.5" />
-              <span>Personel Kadrosu</span>
-            </button>
-          )}
+          {/* Barbers / Staff Profile */}
+          <button
+            onClick={() => setCurrentTab('barbers')}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+              currentTab === 'barbers'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-bold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span>{isStaff ? 'Profilim & Fotoğrafım' : 'Personel Kadrosu'}</span>
+          </button>
 
           {/* Services & Duration */}
           {!isStaff && (
@@ -194,25 +192,26 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Quick Manual New Appointment */}
           <button
             onClick={onOpenNewAppointment}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm whitespace-nowrap shrink-0"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors shadow-sm whitespace-nowrap shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>+ Randevu Ekle</span>
+            <span className="hidden sm:inline">+ Randevu Ekle</span>
+            <span className="sm:hidden">+ Randevu</span>
           </button>
 
           {/* Notifications Bell */}
           <button
             onClick={onOpenNotifications}
-            className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="relative p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
             title="Bildirimler & Anlık Uyarılar"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-slate-950 ring-2 ring-slate-950 animate-pulse">
+              <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] sm:text-[10px] font-bold text-slate-950 ring-2 ring-slate-950 animate-pulse">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -222,20 +221,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={handleNavbarSync}
             disabled={isSyncing}
-            className={`p-2 rounded-xl transition-colors relative border ${
+            className={`p-1.5 sm:p-2 rounded-xl transition-colors relative border shrink-0 ${
               syncSuccess
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800 border-slate-800'
             }`}
             title="Buluttan Tüm Cihazları Eşitle & Yenile"
           >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-amber-400' : syncSuccess ? 'text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isSyncing ? 'animate-spin text-amber-400' : syncSuccess ? 'text-emerald-400' : ''}`} />
           </button>
 
           {/* Switch to Customer View Button */}
           <button
             onClick={() => setActiveMode('customer')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition-all whitespace-nowrap shrink-0 shadow-sm"
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition-all whitespace-nowrap shrink-0 shadow-sm"
             title="Müşteri Online Randevu Portalı Sayfasına Geç"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -245,7 +244,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logout Button */}
           <button
             onClick={logout}
-            className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
             title="Güvenli Çıkış Yap"
           >
             <LogOut className="w-4 h-4" />

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { getAssetUrl } from '../utils/assetHelper';
 import { useBarber } from '../context/BarberContext';
 import { Barber } from '../types';
@@ -92,7 +92,21 @@ export const BarbersView: React.FC = () => {
     deleteBarber,
     toggleBarberActive,
     currentUserRole,
+    loggedInBarberId,
+    currentUser,
   } = useBarber();
+
+  const isStaff = currentUserRole === 'staff';
+
+  const myProfile = useMemo(() => {
+    if (loggedInBarberId) {
+      return barbers.find((b) => b.id === loggedInBarberId);
+    }
+    if (currentUser?.barberId) {
+      return barbers.find((b) => b.id === currentUser.barberId);
+    }
+    return null;
+  }, [barbers, loggedInBarberId, currentUser]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -274,6 +288,52 @@ export const BarbersView: React.FC = () => {
         <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-lg animate-in fade-in">
           <Check className="w-4 h-4" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* FEATURED STAFF PROFILE BANNER (FOR LOGGED-IN STAFF) */}
+      {isStaff && myProfile && (
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-950 border border-amber-500/40 shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div
+                onClick={() => openEditModal(myProfile)}
+                className="relative group/myavatar cursor-pointer shrink-0"
+                title="Fotoğrafımı ve Profilimi Düzenle"
+              >
+                <img
+                  src={getAssetUrl(myProfile.avatar)}
+                  alt={myProfile.name}
+                  referrerPolicy="no-referrer"
+                  className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-500/60 group-hover/myavatar:border-amber-400 transition-colors shadow-lg"
+                />
+                <div className="absolute inset-0 bg-slate-950/60 rounded-2xl opacity-0 group-hover/myavatar:opacity-100 flex items-center justify-center text-amber-400 font-bold text-xs transition-opacity">
+                  <Camera className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">{myProfile.name}</h2>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
+                    Profilim
+                  </span>
+                </div>
+                <p className="text-xs text-amber-400 font-medium">{myProfile.title}</p>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-md line-clamp-2">
+                  {myProfile.bio || 'Saç ve sakal şekillendirme uzmanı.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => openEditModal(myProfile)}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-lg flex items-center gap-2 shrink-0"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Profil Fotoğrafımı & Bilgilerimi Düzenle</span>
+            </button>
+          </div>
         </div>
       )}
 

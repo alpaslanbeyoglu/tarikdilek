@@ -249,7 +249,7 @@ export const ReportsView: React.FC = () => {
         </div>
 
         {/* Date Filter Tabs */}
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto max-w-full scrollbar-none shrink-0">
           <button
             onClick={() => setDateFilter('today')}
             className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
