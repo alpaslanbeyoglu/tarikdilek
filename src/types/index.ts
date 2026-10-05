@@ -27,6 +27,7 @@ export interface Barber {
     lunchEnd: string;   // "14:00"
   };
   daysOff: number[]; // 0 = Sunday, 1 = Monday, etc.
+  commissionRate?: number; // Barber percentage share e.g. 40 = 40%
 }
 
 export interface Service {

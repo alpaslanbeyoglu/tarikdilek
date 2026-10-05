@@ -141,6 +141,7 @@ export const INITIAL_BARBERS: Barber[] = [
       lunchEnd: '14:00',
     },
     daysOff: [0], // Pazar kapalı
+    commissionRate: 50, // %50 Prim Oranı
   },
 ];
 

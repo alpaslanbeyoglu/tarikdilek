@@ -113,6 +113,7 @@ export const BarbersView: React.FC = () => {
   const [lunchStart, setLunchStart] = useState('13:00');
   const [lunchEnd, setLunchEnd] = useState('14:00');
   const [selectedDaysOff, setSelectedDaysOff] = useState<number[]>([0]);
+  const [commissionRate, setCommissionRate] = useState<number>(50);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [customPhotoUrl, setCustomPhotoUrl] = useState('');
@@ -146,6 +147,7 @@ export const BarbersView: React.FC = () => {
     setLunchStart('13:00');
     setLunchEnd('14:00');
     setSelectedDaysOff([0]);
+    setCommissionRate(50);
     setShowUrlInput(false);
     setCustomPhotoUrl('');
     setIsAddModalOpen(true);
@@ -165,6 +167,7 @@ export const BarbersView: React.FC = () => {
     setLunchStart(b.workingHours.lunchStart);
     setLunchEnd(b.workingHours.lunchEnd);
     setSelectedDaysOff(b.daysOff);
+    setCommissionRate(b.commissionRate ?? 50);
     setShowUrlInput(false);
     setCustomPhotoUrl('');
     setIsAddModalOpen(true);
@@ -222,8 +225,9 @@ export const BarbersView: React.FC = () => {
           lunchEnd,
         },
         daysOff: selectedDaysOff,
+        commissionRate: Number(commissionRate) || 50,
       });
-      showToast(`✓ ${name.trim()} bilgileri ve fotoğrafı güncellendi`);
+      showToast(`✓ ${name.trim()} bilgileri ve prim oranı güncellendi`);
     } else {
       addBarber({
         name: name.trim(),
@@ -243,6 +247,7 @@ export const BarbersView: React.FC = () => {
           lunchEnd,
         },
         daysOff: selectedDaysOff,
+        commissionRate: Number(commissionRate) || 50,
       });
       showToast(`✓ Yeni personel ${name.trim()} kadroya eklendi`);
     }
@@ -434,6 +439,16 @@ export const BarbersView: React.FC = () => {
                     </span>
                     <span className="font-mono text-amber-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
                       {barber.pin || '1234'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                      <span>Prim / Hakediş:</span>
+                    </span>
+                    <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                      %{barber.commissionRate ?? 50}
                     </span>
                   </div>
                 </div>
@@ -680,8 +695,8 @@ export const BarbersView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Phone & Staff PIN */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Phone, Staff PIN & Prim Oranı */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">
                     Telefon Numarası
@@ -707,6 +722,25 @@ export const BarbersView: React.FC = () => {
                     onChange={(e) => setPin(e.target.value)}
                     className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-white font-mono focus:border-amber-500 focus:outline-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-amber-400 font-medium mb-1">
+                    Prim / Hakediş Oranı (%)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      required
+                      placeholder="50"
+                      value={commissionRate}
+                      onChange={(e) => setCommissionRate(Number(e.target.value))}
+                      className="w-full rounded-xl bg-slate-950 border border-amber-500/40 px-3 py-2 text-white font-mono font-bold focus:border-amber-400 focus:outline-none pr-8"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs text-amber-400 font-bold">%</span>
+                  </div>
                 </div>
               </div>
 

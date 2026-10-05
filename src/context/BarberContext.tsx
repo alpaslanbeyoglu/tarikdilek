@@ -235,19 +235,21 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     ];
   });
 
-  // Auth & Role State
+  // Auth & Role State - Defaults directly to Salon Manager so manager view is open by default
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     try {
-      const saved = sessionStorage.getItem('tarik_dilek_auth_user');
-      return saved ? JSON.parse(saved) : null;
+      const saved = localStorage.getItem('tarik_dilek_auth_user') || sessionStorage.getItem('tarik_dilek_auth_user');
+      if (saved) return JSON.parse(saved);
     } catch {
-      return null;
+      // fallback
     }
+    return {
+      role: 'admin',
+      name: 'Tarık Dilek (Salon Yöneticisi)',
+    };
   });
 
-  const [activeMode, setActiveMode] = useState<'manager' | 'customer'>(() => {
-    return currentUser ? 'manager' : 'customer';
-  });
+  const [activeMode, setActiveMode] = useState<'manager' | 'customer'>('manager');
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatLocalDateToISO(new Date());
@@ -352,6 +354,10 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSelectedBarberFilter('all');
   }, []);
 
+  // Track initial snapshot vs real-time new incoming bookings
+  const isFirstAptSnapshotRef = React.useRef(true);
+  const knownAptIdsRef = React.useRef<Set<string>>(new Set());
+
   // Real-time Firestore sync across devices for all entities with try-catch and debug indicators
   useEffect(() => {
     let unsubs: Array<() => void> = [];
@@ -363,10 +369,51 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         (snapshot) => {
           try {
             const cloudApts: Appointment[] = [];
+            const newAptsToNotify: Appointment[] = [];
+
+            snapshot.docChanges().forEach((change) => {
+              const data = change.doc.data() as Appointment;
+              if (data && data.id) {
+                if (change.type === 'added') {
+                  if (!isFirstAptSnapshotRef.current && !knownAptIdsRef.current.has(data.id)) {
+                    newAptsToNotify.push(data);
+                  }
+                  knownAptIdsRef.current.add(data.id);
+                }
+              }
+            });
+
             snapshot.forEach((d) => {
               const data = d.data() as Appointment;
-              if (data && data.id) cloudApts.push(data);
+              if (data && data.id) {
+                cloudApts.push(data);
+                knownAptIdsRef.current.add(data.id);
+              }
             });
+
+            if (isFirstAptSnapshotRef.current) {
+              isFirstAptSnapshotRef.current = false;
+            }
+
+            // If new incoming bookings arrived via Firestore, alert manager
+            if (newAptsToNotify.length > 0) {
+              newAptsToNotify.forEach((apt) => {
+                const uniqueNotifId = 'notif-cloud-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
+                const notifItem: NotificationItem = {
+                  id: uniqueNotifId,
+                  title: `🔔 Yeni Randevu: ${apt.customerName}`,
+                  body: `${apt.date} saat ${apt.startTime} için yeni online randevu alındı.`,
+                  timestamp: new Date().toISOString(),
+                  read: false,
+                  appointmentId: apt.id,
+                  type: 'new_booking',
+                };
+                setNotifications((prev) => [notifItem, ...prev.filter((n) => n.id !== uniqueNotifId)]);
+                sendInstantNotification(notifItem.title, notifItem.body, apt.id).catch(console.warn);
+                playNotificationSound();
+              });
+            }
+
             setAppointments((prev) => {
               const map = new Map<string, Appointment>();
               prev.forEach((a) => map.set(a.id, a));
