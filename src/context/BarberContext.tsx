@@ -24,6 +24,7 @@ import {
 import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db, appointmentsCol, barbersCol, customersCol, servicesCol, settingsDocRef } from '../services/firebaseFirestore';
 import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
+import { applyThemeToDOM } from '../utils/themeHelper';
 
 function cleanFirestoreData(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
@@ -325,6 +326,7 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     localStorage.setItem('barber_settings', JSON.stringify(settings));
+    applyThemeToDOM(settings.themeId || 'gold');
   }, [settings]);
 
   useEffect(() => {
