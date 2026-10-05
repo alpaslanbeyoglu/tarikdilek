@@ -259,50 +259,30 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const saved = localStorage.getItem('barber_expenses');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((e: any) => e.id !== 'exp-1' && e.id !== 'exp-2');
+        }
       } catch {
         // fallback
       }
     }
-    return [
-      {
-        id: 'exp-1',
-        category: 'Malzeme/Kozmetik',
-        description: 'Sakal Bakım Yağları ve Şampuan Havlu Tedariği',
-        amount: 1250,
-        date: formatLocalDateToISO(new Date()),
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'exp-2',
-        category: 'Mutfak/İkram',
-        description: 'Kahve Çekirdeği, Çay ve İkramlık Alımı',
-        amount: 350,
-        date: formatLocalDateToISO(new Date()),
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    return [];
   });
 
   const [staffPayouts, setStaffPayouts] = useState<StaffPayout[]>(() => {
     const saved = localStorage.getItem('barber_payouts');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p: any) => p.id !== 'pay-1');
+        }
       } catch {
         // fallback
       }
     }
-    return [
-      {
-        id: 'pay-1',
-        barberId: 'b1',
-        amount: 1000,
-        date: formatLocalDateToISO(new Date()),
-        note: 'Haftalık Avans Ödemesi',
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    return [];
   });
 
   // Auth & Role State

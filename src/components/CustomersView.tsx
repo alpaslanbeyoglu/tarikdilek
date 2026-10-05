@@ -159,7 +159,9 @@ export const CustomersView: React.FC = () => {
                   return (
                     <tr
                       key={cust.id}
-                      className="hover:bg-slate-800/30 transition-colors group"
+                      onClick={() => openEditModal(cust)}
+                      className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                      title="Müşteri bilgilerini düzenlemek için tıklayın"
                     >
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
@@ -258,8 +260,8 @@ export const CustomersView: React.FC = () => {
 
       {/* Add / Edit Customer Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-800 p-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
