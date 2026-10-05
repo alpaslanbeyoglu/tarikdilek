@@ -235,7 +235,7 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     ];
   });
 
-  // Auth & Role State - Defaults directly to Salon Manager so manager view is open by default
+  // Auth & Role State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     try {
       const saved = localStorage.getItem('tarik_dilek_auth_user') || sessionStorage.getItem('tarik_dilek_auth_user');
@@ -243,13 +243,34 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch {
       // fallback
     }
-    return {
-      role: 'admin',
-      name: 'Tarık Dilek (Salon Yöneticisi)',
-    };
+    // If URL contains #admin or #yonetici or ?admin=true, default as Admin
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      if (hash.includes('admin') || hash.includes('yonetici') || search.includes('admin')) {
+        return {
+          role: 'admin',
+          name: 'Tarık Dilek (Salon Yöneticisi)',
+        };
+      }
+    }
+    return null;
   });
 
-  const [activeMode, setActiveMode] = useState<'manager' | 'customer'>('manager');
+  const [activeMode, setActiveMode] = useState<'manager' | 'customer'>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      if (hash.includes('admin') || hash.includes('yonetici') || search.includes('admin')) {
+        return 'manager';
+      }
+      const savedManagerDevice = localStorage.getItem('tarik_dilek_manager_device');
+      if (savedManagerDevice === 'true') {
+        return 'manager';
+      }
+    }
+    return 'customer'; // Default for any customer opening the app link!
+  });
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatLocalDateToISO(new Date());
@@ -321,6 +342,8 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCurrentUser(user);
       setActiveMode('manager');
       setSelectedBarberFilter('all');
+      localStorage.setItem('tarik_dilek_manager_device', 'true');
+      localStorage.setItem('tarik_dilek_auth_user', JSON.stringify(user));
       return true;
     }
     return false;
@@ -342,6 +365,8 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCurrentUser(user);
       setActiveMode('manager');
       setSelectedBarberFilter(targetBarber.id); // Locked to self
+      localStorage.setItem('tarik_dilek_manager_device', 'true');
+      localStorage.setItem('tarik_dilek_auth_user', JSON.stringify(user));
       return true;
     }
     return false;
@@ -352,6 +377,9 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentUser(null);
     setActiveMode('customer');
     setSelectedBarberFilter('all');
+    localStorage.removeItem('tarik_dilek_manager_device');
+    localStorage.removeItem('tarik_dilek_auth_user');
+    sessionStorage.removeItem('tarik_dilek_auth_user');
   }, []);
 
   // Track initial snapshot vs real-time new incoming bookings

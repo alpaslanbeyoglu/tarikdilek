@@ -232,14 +232,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-amber-400' : syncSuccess ? 'text-emerald-400' : ''}`} />
           </button>
 
+          {/* Switch to Customer View Button */}
+          <button
+            onClick={() => setActiveMode('customer')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-950 transition-all whitespace-nowrap shrink-0 shadow-sm"
+            title="Müşteri Online Randevu Portalı Sayfasına Geç"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Müşteri Sayfasına Geç</span>
+          </button>
+
           {/* Logout Button */}
           <button
             onClick={logout}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
-            title="Müşteri Sayfasına Geç"
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            title="Güvenli Çıkış Yap"
           >
-            <LogOut className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden sm:inline">Müşteri Sayfası</span>
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
