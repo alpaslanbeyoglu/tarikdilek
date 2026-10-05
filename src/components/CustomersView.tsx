@@ -133,14 +133,14 @@ export const CustomersView: React.FC = () => {
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
+             <thead className="bg-slate-950 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
               <tr>
                 <th className="py-3 px-4">Müşteri</th>
                 <th className="py-3 px-4">Telefon</th>
                 <th className="py-3 px-4">Tıraş Tercihleri / Notlar</th>
                 <th className="py-3 px-4 text-center">Ziyaret</th>
                 <th className="py-3 px-4 text-right">Son Ziyaret</th>
-                <th className="py-3 px-4 text-right">İşlemler</th>
+                <th className="py-3 px-4 text-right sticky right-0 bg-slate-950 z-10 shadow-[-5px_0_10px_rgba(0,0,0,0.5)]">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -206,7 +206,7 @@ export const CustomersView: React.FC = () => {
                         {cust.lastVisitDate || 'Yeni Müşteri'}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-4 text-right sticky right-0 bg-slate-900/95 backdrop-blur z-10 shadow-[-5px_0_10px_rgba(0,0,0,0.3)]">
                         <div className="flex items-center justify-end gap-1.5">
                           <a
                             href={`tel:${cust.phone}`}
