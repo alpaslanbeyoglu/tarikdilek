@@ -23,6 +23,7 @@ import {
   sendInstantNotification,
   playNotificationSound,
 } from '../services/notificationService';
+import { sendTelegramNotification } from '../services/telegramService';
 import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, query, where, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db, appointmentsCol, barbersCol, customersCol, servicesCol, expensesCol, staffPayoutsCol, settingsDocRef } from '../services/firebaseFirestore';
 import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
@@ -935,6 +936,29 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ).catch((e) => {
         console.warn('Notification warning:', e);
       });
+
+      // Send Telegram notification if configured
+      if (settings.telegramBotToken && settings.telegramChatId) {
+        const serviceNames = services
+          .filter((s) => data.serviceIds.includes(s.id))
+          .map((s) => s.name)
+          .join(', ');
+        const tgMsg = `🔔 <b>Yeni Randevu Alındı!</b>\n\n` +
+          `👤 <b>Müşteri:</b> ${data.customerName}\n` +
+          `📞 <b>Telefon:</b> ${data.customerPhone}\n` +
+          `✂️ <b>Berber:</b> ${barber?.name || 'Seçilen Stilist'}\n` +
+          `💆 <b>Hizmetler:</b> ${serviceNames}\n` +
+          `📅 <b>Tarih:</b> ${data.date}\n` +
+          `⏰ <b>Saat:</b> ${data.startTime}\n` +
+          `💰 <b>Tutar:</b> ₺${totalPrice}\n` +
+          `📌 <b>Durum:</b> ${initialStatus === 'confirmed' ? 'Onaylandı ✓' : 'Onay Bekliyor ⏳'}`;
+
+        sendTelegramNotification(
+          settings.telegramBotToken,
+          settings.telegramChatId,
+          tgMsg
+        ).catch((err) => console.warn('Telegram send error:', err));
+      }
 
       return newAppointment;
     },

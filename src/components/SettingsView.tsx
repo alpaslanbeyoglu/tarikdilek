@@ -43,6 +43,7 @@ import {
   uploadBackupToGoogleDrive,
   downloadBackupFromGoogleDrive,
 } from '../services/googleDriveSync';
+import { sendTelegramNotification } from '../services/telegramService';
 
 export const SettingsView: React.FC = () => {
   const { settings, updateSettings, triggerTestPushNotification, resetToDefaultData, currentUserRole } = useBarber();
@@ -55,6 +56,9 @@ export const SettingsView: React.FC = () => {
   const [address, setAddress] = useState(settings.address);
   const [managerPhone, setManagerPhone] = useState(settings.managerPhone);
   const [autoConfirm, setAutoConfirm] = useState(settings.autoConfirmOnline);
+  const [telegramBotToken, setTelegramBotToken] = useState(settings.telegramBotToken || '');
+  const [telegramChatId, setTelegramChatId] = useState(settings.telegramChatId || '');
+  const [testTgStatus, setTestTgStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -188,9 +192,32 @@ export const SettingsView: React.FC = () => {
       address,
       managerPhone,
       autoConfirmOnline: autoConfirm,
+      telegramBotToken: telegramBotToken.trim(),
+      telegramChatId: telegramChatId.trim(),
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleTestTelegram = async () => {
+    if (!telegramBotToken.trim() || !telegramChatId.trim()) {
+      alert('Lütfen önce Telegram Bot Token ve Chat ID giriniz.');
+      return;
+    }
+    setTestTgStatus('sending');
+    const success = await sendTelegramNotification(
+      telegramBotToken.trim(),
+      telegramChatId.trim(),
+      `🤖 <b>Tarık Dilek Kuaför - Test Mesajı</b>\n\nTelegram bot bildirim entegrasyonu başarıyla çalışıyor! Uygulama kapalıyken bile artık bu sohbet üzerinden anında bildirim alacaksınız. ✓`
+    );
+    if (success) {
+      setTestTgStatus('success');
+      alert('Test mesajı Telegram hesabınıza başarıyla gönderildi! ✓');
+    } else {
+      setTestTgStatus('error');
+      alert('Test mesajı gönderilemedi. Lütfen Bot Token ve Chat ID bilgilerinizin doğruluğunu kontrol edin.');
+    }
+    setTimeout(() => setTestTgStatus('idle'), 3000);
   };
 
   const handleTestChime = () => {
@@ -466,6 +493,84 @@ export const SettingsView: React.FC = () => {
                 <strong className="text-white">Çoklu Cihaz:</strong> Sistem sekmeler ve cihazlar arasında anlık Broadcast senkronizasyonu sağlar.
               </li>
             </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 1.5: TELEGRAM BOT NOTIFICATION (WORKS WHEN APP IS CLOSED) */}
+      <div className="rounded-2xl border border-sky-500/30 bg-slate-900/80 p-5 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+              <Send className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span>Telegram Botu ile Kesintisiz Bildirim</span>
+                <span className="text-[10px] font-semibold text-sky-300 bg-sky-500/20 px-2 py-0.5 rounded-full border border-sky-500/30">
+                  ⚡ %100 Ücretsiz & Uygulama Kapalıyken Çalışır
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Tarayıcı veya uygulama tamamen kapalı olsa bile müşteriler randevu aldığında Telegram hesabınıza anında mesaj gelir
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Form Inputs */}
+          <div className="space-y-3 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+            <h4 className="font-semibold text-white">Telegram Bot Bilgileri</h4>
+            
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Bot Token (BotFather'dan Alınan)</label>
+              <input
+                type="text"
+                placeholder="Örn: 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                value={telegramBotToken}
+                onChange={(e) => setTelegramBotToken(e.target.value)}
+                className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-white font-mono text-xs focus:border-sky-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Chat ID (Sohbet ID'niz)</label>
+              <input
+                type="text"
+                placeholder="Örn: 987654321"
+                value={telegramChatId}
+                onChange={(e) => setTelegramChatId(e.target.value)}
+                className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-white font-mono text-xs focus:border-sky-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTestTelegram}
+                disabled={testTgStatus === 'sending'}
+                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{testTgStatus === 'sending' ? 'Gönderiliyor...' : 'Telegram Test Mesajı Gönder'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Setup Guide */}
+          <div className="space-y-2 bg-slate-950/70 p-4 rounded-xl border border-slate-800 text-[11px] leading-relaxed text-slate-300">
+            <h4 className="font-semibold text-white flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-sky-400" />
+              <span>1 Dakikada Ücretsiz Telegram Botu Kurulumu:</span>
+            </h4>
+            <ol className="list-decimal list-inside space-y-1.5 text-slate-400">
+              <li>Telegram'da arama çubuğuna <strong className="text-white">@BotFather</strong> yazıp sohbeti başlatın ve <code className="text-sky-400">/newbot</code> komutunu gönderin.</li>
+              <li>Botunuza bir isim ve kullanıcı adı verin. BotFather size bir <strong className="text-sky-300">HTTP API Token</strong> verecektir; bunu soldaki ilk kutuya yapıştırın.</li>
+              <li>Oluşturduğunuz yeni botunuzun sohbetine Telegram'da gidip ilk mesajı (<code className="text-sky-400">/start</code>) gönderin.</li>
+              <li>Telegram'da <strong className="text-white">@userinfobot</strong> ile konuşarak kendi <strong className="text-sky-300">Chat ID</strong>'nizi öğrenin ve soldaki ikinci kutuya yapıştırın.</li>
+              <li>Kaydedin ve test mesajı gönderin! Artık uygulama kapalıyken bile randevular cebinize gelsin.</li>
+            </ol>
           </div>
         </div>
       </div>

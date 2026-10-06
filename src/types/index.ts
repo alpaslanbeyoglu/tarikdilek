@@ -116,4 +116,6 @@ export interface BusinessSettings {
   pushEnabled: boolean;
   slotIntervalMinutes: number;
   themeId?: 'gold' | 'emerald' | 'sapphire' | 'light';
+  telegramBotToken?: string;
+  telegramChatId?: string;
 }
