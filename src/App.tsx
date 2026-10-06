@@ -23,13 +23,59 @@ import {
 } from 'lucide-react';
 
 function MainApp() {
-  const { activeMode, setActiveMode, appointments, currentUserRole, logout } = useBarber();
+  const {
+    activeMode,
+    setActiveMode,
+    appointments,
+    updateAppointmentStatus,
+    currentUserRole,
+    logout,
+  } = useBarber();
   const [currentTab, setCurrentTab] = useState<ManagerTabType>('calendar');
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
   const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false);
   const [selectedAppointmentForDetail, setSelectedAppointmentForDetail] = useState<Appointment | null>(null);
+  const [telegramActionNotice, setTelegramActionNotice] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+    details?: string;
+  } | null>(null);
 
   const isStaff = currentUserRole === 'staff';
+
+  // Listen for direct Telegram action buttons (?action=confirm&aptId=... or ?action=cancel&aptId=...)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    const aptId = params.get('aptId') || params.get('appointmentId');
+
+    if (action && aptId) {
+      if (action === 'confirm') {
+        updateAppointmentStatus(aptId, 'confirmed');
+        setTelegramActionNotice({
+          type: 'success',
+          message: '✓ Randevu Telegram Üzerinden Başarıyla Onaylandı!',
+          details: 'Randevu durumu "Onaylandı" olarak güncellendi ve takvime işlendi.',
+        });
+        setActiveMode('manager');
+        setCurrentTab('calendar');
+      } else if (action === 'cancel') {
+        updateAppointmentStatus(aptId, 'cancelled');
+        setTelegramActionNotice({
+          type: 'error',
+          message: 'Randevu Telegram Üzerinden İptal Edildi.',
+          details: 'Randevu iptal olarak işaretlendi.',
+        });
+        setActiveMode('manager');
+        setCurrentTab('calendar');
+      }
+
+      // Remove query parameters from URL without reloading
+      const cleanPath = window.location.pathname;
+      window.history.replaceState({}, '', cleanPath);
+    }
+  }, [updateAppointmentStatus, setActiveMode]);
 
   // Register service worker on mount for PWA & push notifications
   useEffect(() => {
@@ -73,6 +119,33 @@ function MainApp() {
   if (activeMode === 'customer') {
     return (
       <>
+        {telegramActionNotice && (
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] px-4 py-3 rounded-2xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  telegramActionNotice.type === 'success'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-rose-500/20 text-rose-400'
+                }`}
+              >
+                {telegramActionNotice.type === 'success' ? '✓' : '✕'}
+              </span>
+              <div>
+                <p className="text-xs font-bold text-white">{telegramActionNotice.message}</p>
+                {telegramActionNotice.details && (
+                  <p className="text-[11px] text-slate-400">{telegramActionNotice.details}</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setTelegramActionNotice(null)}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <CustomerLandingPage onOpenManager={() => setActiveMode('manager')} />
         <OfflineIndicator />
       </>
@@ -82,6 +155,33 @@ function MainApp() {
   // Manager Mode: Full Management Suite
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-amber-500 selection:text-slate-950 pb-16 md:pb-0">
+      {telegramActionNotice && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] px-4 py-3 rounded-2xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                telegramActionNotice.type === 'success'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-rose-500/20 text-rose-400'
+              }`}
+            >
+              {telegramActionNotice.type === 'success' ? '✓' : '✕'}
+            </span>
+            <div>
+              <p className="text-xs font-bold text-white">{telegramActionNotice.message}</p>
+              {telegramActionNotice.details && (
+                <p className="text-[11px] text-slate-400">{telegramActionNotice.details}</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setTelegramActionNotice(null)}
+            className="text-xs text-slate-400 hover:text-white px-2 py-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Top Navigation for Manager */}
       <Navbar
         currentTab={currentTab}

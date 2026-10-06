@@ -978,10 +978,16 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .map((s) => s.name)
           .join(', ') || 'Standart Hizmet';
 
+        const appBaseUrl = typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://ais-dev-c3h4tvnx5gi54ki35q4tru-870325673371.europe-west2.run.app';
+
         sendTelegramNewAppointmentNotification(
           settings.telegramBotToken,
           settings.telegramChatId,
           {
+            appointmentId: newAppointment.id,
+            appBaseUrl,
             customerName: data.customerName,
             customerPhone: data.customerPhone,
             barberName: barber?.name || 'Seçilen Stilist',

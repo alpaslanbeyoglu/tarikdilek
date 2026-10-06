@@ -1,4 +1,6 @@
 export interface TelegramAppointmentData {
+  appointmentId?: string;
+  appBaseUrl?: string;
   customerName: string;
   customerPhone: string;
   barberName: string;
@@ -16,21 +18,26 @@ export interface TelegramAppointmentData {
 export async function sendTelegramNotification(
   botToken: string,
   chatId: string,
-  message: string
+  message: string,
+  replyMarkup?: any
 ): Promise<boolean> {
   if (!botToken || !chatId || !botToken.trim() || !chatId.trim()) {
     return false;
   }
   try {
     const url = `https://api.telegram.org/bot${botToken.trim()}/sendMessage`;
+    const payload: Record<string, any> = {
+      chat_id: chatId.trim(),
+      text: message,
+      parse_mode: 'HTML',
+    };
+    if (replyMarkup) {
+      payload.reply_markup = replyMarkup;
+    }
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId.trim(),
-        text: message,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     return data.ok === true;
@@ -73,7 +80,37 @@ export async function sendTelegramNewAppointmentNotification(
     `🕒 <i>${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} itibariyle sisteme kaydedildi</i>`
   );
 
-  return sendTelegramNotification(botToken, chatId, lines.join('\n'));
+  // Build interactive inline action buttons
+  let replyMarkup: any = undefined;
+  if (data.appointmentId && data.appBaseUrl) {
+    const cleanUrl = data.appBaseUrl.replace(/\/+$/, '');
+    const confirmUrl = `${cleanUrl}/?action=confirm&aptId=${encodeURIComponent(data.appointmentId)}`;
+    const cancelUrl = `${cleanUrl}/?action=cancel&aptId=${encodeURIComponent(data.appointmentId)}`;
+    const cleanPhone = (data.customerPhone || '').replace(/\D/g, '');
+
+    const inlineKeyboard: Array<Array<{ text: string; url: string }>> = [
+      [
+        { text: '✅ Randevuyu Onayla', url: confirmUrl },
+        { text: '❌ İptal Et', url: cancelUrl },
+      ],
+    ];
+
+    if (cleanPhone) {
+      const waMsg = encodeURIComponent(
+        `Merhaba ${data.customerName}, Tarık Dilek Kuaför'den ${data.date} saat ${data.startTime} randevunuz hakkında bilgi vermek istiyoruz.`
+      );
+      inlineKeyboard.push([
+        {
+          text: '💬 Müşteriye WhatsApp Yaz',
+          url: `https://wa.me/90${cleanPhone.replace(/^0/, '')}?text=${waMsg}`,
+        },
+      ]);
+    }
+
+    replyMarkup = { inline_keyboard: inlineKeyboard };
+  }
+
+  return sendTelegramNotification(botToken, chatId, lines.join('\n'), replyMarkup);
 }
 
 export async function sendTelegramCancellationNotification(
