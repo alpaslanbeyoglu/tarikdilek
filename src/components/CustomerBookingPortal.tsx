@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { getAssetUrl } from '../utils/assetHelper';
 import { useBarber } from '../context/BarberContext';
 import { Service, Barber } from '../types';
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { buildManagerWhatsAppUrl, buildCustomerWhatsAppUrl } from '../services/notificationService';
 import { ShopLocationBadge } from './ShopLocationBadge';
-import { formatLocalDateToISO } from '../utils/dateHelper';
+import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
 
 export const CustomerBookingPortal: React.FC = () => {
   const {
@@ -78,7 +78,7 @@ export const CustomerBookingPortal: React.FC = () => {
   const [modalPhotoUrl, setModalPhotoUrl] = useState<string | null>(null);
 
   // Form State
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(['s3']); // Default Saç & Sakal
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(['s-sac-sakal-kesim']);
   const [selectedBarberId, setSelectedBarberId] = useState<string>('b1');
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return formatLocalDateToISO(new Date());
@@ -101,6 +101,32 @@ export const CustomerBookingPortal: React.FC = () => {
     totalPrice: number;
   } | null>(null);
 
+  // Sync selectedBarberId if current is invalid or inactive
+  useEffect(() => {
+    if (barbers.length > 0) {
+      const activeBarber = barbers.find((b) => b.id === selectedBarberId && b.active);
+      if (!activeBarber) {
+        const firstActive = barbers.find((b) => b.active) || barbers[0];
+        if (firstActive && firstActive.id !== selectedBarberId) {
+          setSelectedBarberId(firstActive.id);
+        }
+      }
+    }
+  }, [barbers, selectedBarberId]);
+
+  // Sync selectedServiceIds if current is invalid
+  useEffect(() => {
+    if (services.length > 0) {
+      const hasValid = selectedServiceIds.some((id) => services.some((s) => s.id === id));
+      if (!hasValid) {
+        const defaultService = services.find((s) => s.popular) || services[0];
+        if (defaultService) {
+          setSelectedServiceIds([defaultService.id]);
+        }
+      }
+    }
+  }, [services, selectedServiceIds]);
+
   // Filtered Services
   const filteredServices = useMemo(() => {
     if (categoryFilter === 'all') return services;
@@ -109,11 +135,16 @@ export const CustomerBookingPortal: React.FC = () => {
 
   // Selected Services objects
   const selectedServices = useMemo(() => {
-    return services.filter((s) => selectedServiceIds.includes(s.id));
+    const list = services.filter((s) => selectedServiceIds.includes(s.id));
+    if (list.length === 0 && services.length > 0) {
+      return [services.find((s) => s.popular) || services[0]];
+    }
+    return list;
   }, [services, selectedServiceIds]);
 
   const totalDuration = useMemo(() => {
-    return selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+    const duration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+    return Math.max(20, duration || 30);
   }, [selectedServices]);
 
   const totalPrice = useMemo(() => {
@@ -126,11 +157,11 @@ export const CustomerBookingPortal: React.FC = () => {
     return getAvailableSlots(selectedBarberId, selectedDate, totalDuration);
   }, [selectedBarberId, selectedDate, totalDuration, getAvailableSlots]);
 
-  // Generate next 10 days for date picker
+  // Generate next 14 days for date picker
   const upcomingDates = useMemo(() => {
     const list = [];
     const today = new Date();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 14; i++) {
       const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
       const iso = formatLocalDateToISO(d);
       const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
@@ -148,6 +179,34 @@ export const CustomerBookingPortal: React.FC = () => {
     }
     return list;
   }, []);
+
+  // Helper to find earliest date with available slots
+  const firstAvailableDate = useMemo(() => {
+    if (!selectedBarberId || totalDuration === 0 || upcomingDates.length === 0) return null;
+    const barber = barbers.find((b) => b.id === selectedBarberId);
+    return (
+      upcomingDates.find((item) => {
+        const isOff = (barber?.daysOff || []).includes(item.dayOfWeek);
+        if (isOff) return false;
+        const slots = getAvailableSlots(selectedBarberId, item.iso, totalDuration);
+        return slots.length > 0;
+      }) || null
+    );
+  }, [selectedBarberId, totalDuration, upcomingDates, barbers, getAvailableSlots]);
+
+  // If selectedDate has 0 slots or is day-off, automatically advance to first available date
+  useEffect(() => {
+    if (!firstAvailableDate || !selectedBarberId) return;
+    const currentSlots = getAvailableSlots(selectedBarberId, selectedDate, totalDuration);
+    const barber = barbers.find((b) => b.id === selectedBarberId);
+    const isDayOff = (barber?.daysOff || []).includes(parseISODateToLocal(selectedDate).getDay());
+    if (currentSlots.length === 0 || isDayOff) {
+      if (firstAvailableDate.iso !== selectedDate) {
+        setSelectedDate(firstAvailableDate.iso);
+        setSelectedTime('');
+      }
+    }
+  }, [selectedBarberId, totalDuration, firstAvailableDate, selectedDate, getAvailableSlots, barbers]);
 
   const toggleService = (id: string) => {
     setSelectedServiceIds((prev) => {
@@ -613,7 +672,13 @@ export const CustomerBookingPortal: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  if (firstAvailableDate && availableSlots.length === 0) {
+                    setSelectedDate(firstAvailableDate.iso);
+                    setSelectedTime('');
+                  }
+                  setStep(3);
+                }}
                 disabled={!selectedBarberId}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md disabled:opacity-50"
               >
@@ -645,15 +710,33 @@ export const CustomerBookingPortal: React.FC = () => {
 
             {/* Horizontal Date Picker */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                <span>Tarih Seçimi</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Tarih Seçimi (Önümüzdeki 14 Gün)</span>
+                </label>
+                {firstAvailableDate && firstAvailableDate.iso !== selectedDate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDate(firstAvailableDate.iso);
+                      setSelectedTime('');
+                    }}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold underline"
+                  >
+                    En Erken Müsait Gün: {firstAvailableDate.dayName} {firstAvailableDate.dayNumber} {firstAvailableDate.monthName}
+                  </button>
+                )}
+              </div>
 
               <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                 {upcomingDates.map((item) => {
                   const isSelected = selectedDate === item.iso;
-                  const isDayOff = selectedBarber?.daysOff.includes(item.dayOfWeek);
+                  const isDayOff = (selectedBarber?.daysOff || []).includes(item.dayOfWeek);
+                  const daySlotsCount = !isDayOff && selectedBarberId
+                    ? getAvailableSlots(selectedBarberId, item.iso, totalDuration).length
+                    : 0;
+                  const isFull = !isDayOff && daySlotsCount === 0;
 
                   return (
                     <button
@@ -663,9 +746,9 @@ export const CustomerBookingPortal: React.FC = () => {
                         setSelectedDate(item.iso);
                         setSelectedTime(''); // Reset time on date change
                       }}
-                      className={`flex flex-col items-center justify-center min-w-[70px] sm:min-w-[80px] py-3 px-2 rounded-2xl border transition-all ${
+                      className={`flex flex-col items-center justify-center min-w-[72px] sm:min-w-[82px] py-2.5 px-2 rounded-2xl border transition-all ${
                         isDayOff
-                          ? 'opacity-30 border-slate-900 bg-slate-950 cursor-not-allowed text-slate-600'
+                          ? 'opacity-35 border-slate-900 bg-slate-950 cursor-not-allowed text-slate-600'
                           : isSelected
                           ? 'bg-amber-500 border-amber-400 text-slate-950 shadow-lg font-bold'
                           : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
@@ -679,6 +762,17 @@ export const CustomerBookingPortal: React.FC = () => {
                       </span>
                       <span className={`text-[10px] ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
                         {item.monthName}
+                      </span>
+                      <span className={`text-[9px] font-semibold mt-1 px-1.5 py-0.5 rounded-full ${
+                        isSelected
+                          ? 'bg-slate-950/20 text-slate-900'
+                          : isDayOff
+                          ? 'text-slate-600'
+                          : isFull
+                          ? 'text-rose-400 bg-rose-500/10'
+                          : 'text-emerald-400 bg-emerald-500/10'
+                      }`}>
+                        {isDayOff ? 'İzin' : isFull ? 'Dolu' : `${daySlotsCount} saat`}
                       </span>
                     </button>
                   );
@@ -702,10 +796,29 @@ export const CustomerBookingPortal: React.FC = () => {
               </div>
 
               {availableSlots.length === 0 ? (
-                <div className="py-8 text-center text-slate-400">
-                  <AlertCircle className="w-8 h-8 text-amber-500/60 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-slate-300">Bu tarihte uygun boş randevu saati kalmadı</p>
-                  <p className="text-xs text-slate-500 mt-1">Lütfen yukarıdan başka bir gün seçiniz veya farklı bir stilist deneyiniz.</p>
+                <div className="py-8 text-center text-slate-400 space-y-3">
+                  <AlertCircle className="w-8 h-8 text-amber-500/60 mx-auto" />
+                  <p className="text-sm font-bold text-slate-200">Bu tarihte uygun boş randevu saati kalmadı</p>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    {(selectedBarber?.daysOff || []).includes(parseISODateToLocal(selectedDate).getDay())
+                      ? `${selectedBarber?.name || 'Seçilen stilist'} bu tarihte haftalık izindedir.`
+                      : selectedDate === formatLocalDateToISO(new Date())
+                      ? 'Bugünün kalan saatleri dolmuş veya geçmiş olabilir.'
+                      : 'Lütfen yukarıdaki takvimden diğer günleri seçiniz.'}
+                  </p>
+                  {firstAvailableDate && firstAvailableDate.iso !== selectedDate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(firstAvailableDate.iso);
+                        setSelectedTime('');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all inline-flex items-center gap-1.5"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>İlk Müsait Güne Git ({firstAvailableDate.dayName} {firstAvailableDate.dayNumber} {firstAvailableDate.monthName})</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">

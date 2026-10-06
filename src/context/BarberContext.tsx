@@ -23,7 +23,11 @@ import {
   sendInstantNotification,
   playNotificationSound,
 } from '../services/notificationService';
-import { sendTelegramNotification } from '../services/telegramService';
+import {
+  sendTelegramNotification,
+  sendTelegramNewAppointmentNotification,
+  sendTelegramCancellationNotification,
+} from '../services/telegramService';
 import { doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, query, where, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db, appointmentsCol, barbersCol, customersCol, servicesCol, expensesCol, staffPayoutsCol, settingsDocRef } from '../services/firebaseFirestore';
 import { formatLocalDateToISO, parseISODateToLocal } from '../utils/dateHelper';
@@ -117,9 +121,12 @@ const BarberContext = createContext<BarberContextType | undefined>(undefined);
 
 const BROADCAST_CHANNEL_NAME = 'tarik_dilek_broadcast_channel';
 
-// Helper to convert time "HH:MM" to minutes from midnight
+// Helper to convert time "HH:MM" to minutes from midnight (safe against null/undefined)
 function timeToMinutes(timeStr: string): number {
-  const [h, m] = timeStr.split(':').map(Number);
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const parts = timeStr.split(':').map(Number);
+  const h = isNaN(parts[0]) ? 0 : parts[0];
+  const m = isNaN(parts[1]) ? 0 : parts[1];
   return h * 60 + m;
 }
 
@@ -779,42 +786,69 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       let currentMinFromMidnight = -1;
       if (isToday) {
         const now = new Date();
-        currentMinFromMidnight = now.getHours() * 60 + now.getMinutes();
+        // Give 5 minutes grace buffer for today so slots don't conflict with past minute
+        currentMinFromMidnight = now.getHours() * 60 + now.getMinutes() + 5;
       }
 
+      const daysOff = Array.isArray(barber.daysOff) ? barber.daysOff : [0];
       const dayOfWeek = targetDate.getDay();
-      if (barber.daysOff.includes(dayOfWeek)) {
+      if (daysOff.includes(dayOfWeek)) {
         return [];
       }
 
-      const { start, end, lunchStart, lunchEnd } = barber.workingHours;
+      const workingHours = barber.workingHours || {
+        start: '09:00',
+        end: '20:00',
+        lunchStart: '13:00',
+        lunchEnd: '14:00',
+      };
+      const start = workingHours.start || '09:00';
+      const end = workingHours.end || '20:00';
+      const lunchStart = workingHours.lunchStart || '';
+      const lunchEnd = workingHours.lunchEnd || '';
+
       const startMin = timeToMinutes(start);
       const endMin = timeToMinutes(end);
-      const lunchStartMin = timeToMinutes(lunchStart);
-      const lunchEndMin = timeToMinutes(lunchEnd);
-
-      const dayAppointments = appointments.filter(
-        (a) => a.barberId === barberId && a.date === date && a.status !== 'cancelled'
-      );
+      const effectiveStartMin = startMin >= 0 && startMin < 1440 ? startMin : 540; // 09:00
+      const effectiveEndMin = endMin > effectiveStartMin ? endMin : effectiveStartMin + 660; // 20:00
 
       const busyRanges: Array<{ start: number; end: number }> = [];
-      busyRanges.push({ start: lunchStartMin, end: lunchEndMin });
+
+      // Only add lunch if valid lunch break is defined and within working hours
+      if (lunchStart && lunchEnd) {
+        const lunchStartMin = timeToMinutes(lunchStart);
+        const lunchEndMin = timeToMinutes(lunchEnd);
+        if (lunchEndMin > lunchStartMin && lunchStartMin >= effectiveStartMin && lunchEndMin <= effectiveEndMin) {
+          busyRanges.push({ start: lunchStartMin, end: lunchEndMin });
+        }
+      }
+
+      const dayAppointments = appointments.filter(
+        (a) => a && a.barberId === barberId && a.date === date && a.status !== 'cancelled'
+      );
 
       dayAppointments.forEach((apt) => {
+        if (!apt.startTime) return;
+        const aptStart = timeToMinutes(apt.startTime);
+        let aptEnd = apt.endTime ? timeToMinutes(apt.endTime) : 0;
+        if (aptEnd <= aptStart) {
+          aptEnd = aptStart + (apt.totalDuration || 30);
+        }
         busyRanges.push({
-          start: timeToMinutes(apt.startTime),
-          end: timeToMinutes(apt.endTime),
+          start: aptStart,
+          end: aptEnd,
         });
       });
 
-      const slotInterval = settings.slotIntervalMinutes || 30;
+      const effectiveDuration = Math.max(15, durationMinutes || 30);
+      const slotInterval = Math.max(15, Number(settings.slotIntervalMinutes) || 30);
       const availableSlots: string[] = [];
 
-      for (let time = startMin; time + durationMinutes <= endMin; time += slotInterval) {
+      for (let time = effectiveStartMin; time + effectiveDuration <= effectiveEndMin; time += slotInterval) {
         if (isToday && time <= currentMinFromMidnight) {
           continue; // Skip past time slots for today
         }
-        const slotEnd = time + durationMinutes;
+        const slotEnd = time + effectiveDuration;
         const isConflict = busyRanges.some(
           (range) => time < range.end && slotEnd > range.start
         );
@@ -942,21 +976,24 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const serviceNames = services
           .filter((s) => data.serviceIds.includes(s.id))
           .map((s) => s.name)
-          .join(', ');
-        const tgMsg = `🔔 <b>Yeni Randevu Alındı!</b>\n\n` +
-          `👤 <b>Müşteri:</b> ${data.customerName}\n` +
-          `📞 <b>Telefon:</b> ${data.customerPhone}\n` +
-          `✂️ <b>Berber:</b> ${barber?.name || 'Seçilen Stilist'}\n` +
-          `💆 <b>Hizmetler:</b> ${serviceNames}\n` +
-          `📅 <b>Tarih:</b> ${data.date}\n` +
-          `⏰ <b>Saat:</b> ${data.startTime}\n` +
-          `💰 <b>Tutar:</b> ₺${totalPrice}\n` +
-          `📌 <b>Durum:</b> ${initialStatus === 'confirmed' ? 'Onaylandı ✓' : 'Onay Bekliyor ⏳'}`;
+          .join(', ') || 'Standart Hizmet';
 
-        sendTelegramNotification(
+        sendTelegramNewAppointmentNotification(
           settings.telegramBotToken,
           settings.telegramChatId,
-          tgMsg
+          {
+            customerName: data.customerName,
+            customerPhone: data.customerPhone,
+            barberName: barber?.name || 'Seçilen Stilist',
+            serviceNames,
+            date: data.date,
+            startTime: data.startTime,
+            endTime,
+            totalPrice,
+            status: initialStatus,
+            notes: data.notes,
+            source: data.source || 'online',
+          }
         ).catch((err) => console.warn('Telegram send error:', err));
       }
 
@@ -968,9 +1005,11 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Update appointment status
   const updateAppointmentStatus = useCallback(async (id: string, status: AppointmentStatus) => {
     let updatedApt: Appointment | null = null;
+    let prevApt: Appointment | null = null;
     setAppointments((prev) =>
       prev.map((apt) => {
         if (apt.id === id) {
+          prevApt = apt;
           updatedApt = { ...apt, status };
           return updatedApt;
         }
@@ -984,24 +1023,90 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } catch (e) {
         console.error('Firestore status update error:', e);
       }
+
+      // If status changed to cancelled, send instant Telegram alert
+      if (status === 'cancelled' && prevApt && (prevApt as Appointment).status !== 'cancelled' && settings.telegramBotToken && settings.telegramChatId) {
+        const targetApt = updatedApt as Appointment;
+        const barber = barbers.find((b) => b.id === targetApt.barberId);
+        const serviceNames = services
+          .filter((s) => targetApt.serviceIds.includes(s.id))
+          .map((s) => s.name)
+          .join(', ') || 'Hizmet';
+
+        sendTelegramCancellationNotification(
+          settings.telegramBotToken,
+          settings.telegramChatId,
+          {
+            customerName: targetApt.customerName,
+            customerPhone: targetApt.customerPhone,
+            barberName: barber?.name || 'Tarık Dilek',
+            serviceNames,
+            date: targetApt.date,
+            startTime: targetApt.startTime,
+            endTime: targetApt.endTime,
+            totalPrice: targetApt.totalPrice,
+            status: 'cancelled',
+            notes: targetApt.notes,
+            source: targetApt.source,
+            cancelReason: 'Randevu durumu "İptal Edildi" olarak güncellendi.',
+          }
+        ).catch((err) => console.warn('Telegram cancellation alert error:', err));
+      }
     }
-  }, []);
+  }, [barbers, services, settings.telegramBotToken, settings.telegramChatId]);
 
   // Update whole appointment (reschedule, change barber, etc.)
   const updateAppointment = useCallback(async (updated: Appointment) => {
+    let prevApt: Appointment | null = null;
     setAppointments((prev) =>
-      prev.map((apt) => (apt.id === updated.id ? updated : apt))
+      prev.map((apt) => {
+        if (apt.id === updated.id) {
+          prevApt = apt;
+          return updated;
+        }
+        return apt;
+      })
     );
     try {
       await setDoc(doc(db, 'tarik_dilek_appointments', updated.id), cleanFirestoreData(updated));
     } catch (e) {
       console.error('Firestore update error:', e);
     }
-  }, []);
+
+    // Check if status changed to cancelled
+    if (updated.status === 'cancelled' && prevApt && (prevApt as Appointment).status !== 'cancelled' && settings.telegramBotToken && settings.telegramChatId) {
+      const barber = barbers.find((b) => b.id === updated.barberId);
+      const serviceNames = services
+        .filter((s) => updated.serviceIds.includes(s.id))
+        .map((s) => s.name)
+        .join(', ') || 'Hizmet';
+
+      sendTelegramCancellationNotification(
+        settings.telegramBotToken,
+        settings.telegramChatId,
+        {
+          customerName: updated.customerName,
+          customerPhone: updated.customerPhone,
+          barberName: barber?.name || 'Tarık Dilek',
+          serviceNames,
+          date: updated.date,
+          startTime: updated.startTime,
+          endTime: updated.endTime,
+          totalPrice: updated.totalPrice,
+          status: 'cancelled',
+          notes: updated.notes,
+          source: updated.source,
+          cancelReason: 'Randevu güncellenerek iptal edildi.',
+        }
+      ).catch((err) => console.warn('Telegram cancellation alert error:', err));
+    }
+  }, [barbers, services, settings.telegramBotToken, settings.telegramChatId]);
 
   const deleteAppointment = useCallback(async (id: string) => {
+    let deletedApt: Appointment | null = null;
     // 1. Immediately remove from local state and update localStorage
     setAppointments((prev) => {
+      deletedApt = prev.find((a) => a.id === id) || null;
       const next = prev.filter((a) => a.id !== id);
       try {
         localStorage.setItem('barber_appointments', JSON.stringify(next));
@@ -1010,6 +1115,35 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return next;
     });
+
+    // Send Telegram cancellation/deletion notification if configured
+    if (deletedApt && settings.telegramBotToken && settings.telegramChatId) {
+      const apt = deletedApt as Appointment;
+      const barber = barbers.find((b) => b.id === apt.barberId);
+      const serviceNames = services
+        .filter((s) => apt.serviceIds.includes(s.id))
+        .map((s) => s.name)
+        .join(', ') || 'Hizmet';
+
+      sendTelegramCancellationNotification(
+        settings.telegramBotToken,
+        settings.telegramChatId,
+        {
+          customerName: apt.customerName,
+          customerPhone: apt.customerPhone,
+          barberName: barber?.name || 'Tarık Dilek',
+          serviceNames,
+          date: apt.date,
+          startTime: apt.startTime,
+          endTime: apt.endTime,
+          totalPrice: apt.totalPrice,
+          status: 'cancelled',
+          notes: apt.notes,
+          source: apt.source,
+          cancelReason: 'Randevu ajandadan silindi / iptal edildi.',
+        }
+      ).catch((err) => console.warn('Telegram delete alert error:', err));
+    }
 
     // 2. Prevent re-notification in this session
     knownAptIdsRef.current.delete(id);
@@ -1030,7 +1164,7 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (e) {
       console.warn('Firestore query delete error:', e);
     }
-  }, []);
+  }, [barbers, services, settings.telegramBotToken, settings.telegramChatId]);
 
   // Barber management
   const addBarber = useCallback(async (barberData: Omit<Barber, 'id'>) => {

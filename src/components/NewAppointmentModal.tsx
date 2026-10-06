@@ -40,7 +40,9 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   const [selectedBarberId, setSelectedBarberId] = useState<string>(
     initialBarberId || barbers[0]?.id || 'b1'
   );
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(['s1']);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(() => [
+    services[0]?.id || 's-sac-kesim',
+  ]);
   const [date, setDate] = useState<string>(initialDate || globalDate);
   const [time, setTime] = useState<string>(initialTime || '11:00');
   const [notes, setNotes] = useState<string>('');
@@ -67,11 +69,16 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
   };
 
   const selectedServices = useMemo(() => {
-    return services.filter((s) => selectedServiceIds.includes(s.id));
+    const list = services.filter((s) => selectedServiceIds.includes(s.id));
+    if (list.length === 0 && services.length > 0) {
+      return [services[0]];
+    }
+    return list;
   }, [services, selectedServiceIds]);
 
   const totalDuration = useMemo(() => {
-    return selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+    const dur = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+    return Math.max(15, dur || 30);
   }, [selectedServices]);
 
   const totalPrice = useMemo(() => {
