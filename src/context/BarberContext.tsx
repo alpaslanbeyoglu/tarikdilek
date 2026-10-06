@@ -142,6 +142,8 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ...b,
             name: b.id === 'b1' ? 'Tarık Dilek' : b.name,
             title: b.id === 'b1' ? 'Kurucu & Baş Berber' : b.title,
+            experienceYears: b.id === 'b1' ? 20 : (b.experienceYears || 20),
+            bio: b.id === 'b1' && (b.bio?.includes('15 yıl') || !b.bio) ? '20 yıllık berberlik ve saç sanatı tecrübesi, kişiye özel kafa yapısı ve saç analizi.' : (b.bio || ''),
             pin: b.pin || (b.id === 'b1' ? '1461' : '1234'),
           }));
         }
@@ -553,7 +555,14 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const cloudBarbers: Barber[] = [];
             snapshot.forEach((d) => {
               const data = d.data() as Barber;
-              if (data && data.id) cloudBarbers.push(data);
+              if (data && data.id) {
+                if (data.id === 'b1') {
+                  data.experienceYears = 20;
+                  data.bio = '20 yıllık berberlik ve saç sanatı tecrübesi, kişiye özel kafa yapısı ve saç analizi.';
+                  setDoc(doc(db, 'tarik_dilek_barbers', 'b1'), cleanFirestoreData(data)).catch(console.error);
+                }
+                cloudBarbers.push(data);
+              }
             });
             if (cloudBarbers.length > 0) {
               setBarbers(cloudBarbers);
@@ -757,6 +766,21 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!barber || !barber.active) return [];
 
       const targetDate = parseISODateToLocal(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+      if (targetDateOnly.getTime() < today.getTime()) {
+        return []; // Past dates have no available slots
+      }
+
+      const todayStr = formatLocalDateToISO(new Date());
+      const isToday = date === todayStr;
+      let currentMinFromMidnight = -1;
+      if (isToday) {
+        const now = new Date();
+        currentMinFromMidnight = now.getHours() * 60 + now.getMinutes();
+      }
+
       const dayOfWeek = targetDate.getDay();
       if (barber.daysOff.includes(dayOfWeek)) {
         return [];
@@ -786,6 +810,9 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const availableSlots: string[] = [];
 
       for (let time = startMin; time + durationMinutes <= endMin; time += slotInterval) {
+        if (isToday && time <= currentMinFromMidnight) {
+          continue; // Skip past time slots for today
+        }
         const slotEnd = time + durationMinutes;
         const isConflict = busyRanges.some(
           (range) => time < range.end && slotEnd > range.start
@@ -1200,9 +1227,17 @@ export const BarberProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  const sortedBarbers = useMemo(() => {
+    return [...barbers].sort((a, b) => {
+      if (a.id === 'b1') return -1;
+      if (b.id === 'b1') return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [barbers]);
+
   const value = useMemo(
     () => ({
-      barbers,
+      barbers: sortedBarbers,
       services,
       customers,
       appointments,

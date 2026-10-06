@@ -114,6 +114,7 @@ export const BarbersView: React.FC = () => {
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [modalPhotoUrl, setModalPhotoUrl] = useState<string | null>(null);
 
   // Form State for Add / Edit
   const [name, setName] = useState('');
@@ -129,6 +130,8 @@ export const BarbersView: React.FC = () => {
   const [lunchEnd, setLunchEnd] = useState('14:00');
   const [selectedDaysOff, setSelectedDaysOff] = useState<number[]>([0]);
   const [commissionRate, setCommissionRate] = useState<number>(50);
+  const [active, setActive] = useState<boolean>(true);
+  const [inactiveNote, setInactiveNote] = useState<string>('');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [customPhotoUrl, setCustomPhotoUrl] = useState('');
@@ -163,6 +166,8 @@ export const BarbersView: React.FC = () => {
     setLunchEnd('14:00');
     setSelectedDaysOff([0]);
     setCommissionRate(50);
+    setActive(true);
+    setInactiveNote('');
     setShowUrlInput(false);
     setCustomPhotoUrl('');
     setIsAddModalOpen(true);
@@ -183,6 +188,8 @@ export const BarbersView: React.FC = () => {
     setLunchEnd(b.workingHours.lunchEnd);
     setSelectedDaysOff(b.daysOff);
     setCommissionRate(b.commissionRate ?? 50);
+    setActive(b.active);
+    setInactiveNote(b.inactiveNote || '');
     setShowUrlInput(false);
     setCustomPhotoUrl('');
     setIsAddModalOpen(true);
@@ -238,6 +245,8 @@ export const BarbersView: React.FC = () => {
         pin: pin.trim() || '1234',
         bio: bio.trim(),
         experienceYears,
+        active,
+        inactiveNote: !active ? inactiveNote.trim() : undefined,
         workingHours: {
           start: workStart,
           end: workEnd,
@@ -259,7 +268,8 @@ export const BarbersView: React.FC = () => {
         bio: bio.trim(),
         rating: 4.9,
         experienceYears,
-        active: true,
+        active,
+        inactiveNote: !active ? inactiveNote.trim() : undefined,
         servicesOffered: ['s1', 's2', 's3', 's4'],
         workingHours: {
           start: workStart,
@@ -334,9 +344,9 @@ export const BarbersView: React.FC = () => {
               {/* Top Photo & Bio Card */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-6 border-b border-slate-800">
                 <div
-                  onClick={() => openEditModal(myProfile)}
+                  onClick={() => setModalPhotoUrl(myProfile.avatar)}
                   className="relative group/avatar cursor-pointer shrink-0"
-                  title="Fotoğrafımı Değiştir"
+                  title="Fotoğrafı büyütmek için tıklayın"
                 >
                   <img
                     src={getAssetUrl(myProfile.avatar)}
@@ -345,8 +355,8 @@ export const BarbersView: React.FC = () => {
                     className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border-2 border-amber-500/40 group-hover/avatar:border-amber-400 transition-colors shadow-2xl"
                   />
                   <div className="absolute inset-0 bg-slate-950/60 rounded-3xl opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center text-amber-400 font-bold text-xs transition-opacity flex-col gap-1">
-                    <Camera className="w-6 h-6" />
-                    <span>Değiştir</span>
+                    <Sparkles className="w-5 h-5" />
+                    <span>Büyüt</span>
                   </div>
                 </div>
 
@@ -978,6 +988,42 @@ export const BarbersView: React.FC = () => {
                 />
               </div>
 
+              {/* Active Status & Inactive Note for Customers */}
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-white font-bold block text-xs">Personel Durumu (Aktif / Pasif)</label>
+                    <p className="text-[11px] text-slate-400">Pasif duruma alınan personel randevu sisteminde gri görünür</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActive(!active)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      active
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                    }`}
+                  >
+                    {active ? 'Aktif (Çalışıyor) ✓' : 'Pasif (Kapalı) ✕'}
+                  </button>
+                </div>
+
+                {!active && (
+                  <div className="pt-2 border-t border-slate-800 space-y-1">
+                    <label className="block text-slate-300 font-medium text-[11px]">
+                      Müşterilere Gösterilecek Kapalı / İzin Notu:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Örn: Yıllık izinli veya geçici olarak randevuya kapalıdır."
+                      value={inactiveNote}
+                      onChange={(e) => setInactiveNote(e.target.value)}
+                      className="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Working Hours */}
               <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-3">
                 <span className="text-slate-300 font-semibold block">Mesai Saatleri</span>
@@ -1062,6 +1108,37 @@ export const BarbersView: React.FC = () => {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Photo Zoom Lightbox Modal */}
+      {modalPhotoUrl && (
+        <div
+          onClick={() => setModalPhotoUrl(null)}
+          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-sm w-full bg-slate-900 border border-slate-800 p-4 rounded-3xl shadow-2xl text-center space-y-4"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h4 className="text-sm font-bold text-white">Personel Profil Fotoğrafı</h4>
+              <button
+                onClick={() => setModalPhotoUrl(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-2xl bg-slate-950 border border-slate-800 p-2">
+              <img
+                src={getAssetUrl(modalPhotoUrl)}
+                alt="Enlarged Staff"
+                referrerPolicy="no-referrer"
+                className="w-full h-auto max-h-[70vh] object-contain rounded-xl mx-auto shadow-xl"
+              />
+            </div>
           </div>
         </div>
       )}

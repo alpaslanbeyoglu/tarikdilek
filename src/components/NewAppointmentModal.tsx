@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useBarber } from '../context/BarberContext';
+import { formatLocalDateToISO } from '../utils/dateHelper';
 import {
   X,
   Plus,
@@ -278,6 +279,7 @@ export const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({
                 <input
                   type="date"
                   required
+                  min={formatLocalDateToISO(new Date())}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full rounded-xl bg-slate-950 border border-slate-800 pl-8 pr-3 py-2 text-white font-mono focus:border-amber-500 focus:outline-none"

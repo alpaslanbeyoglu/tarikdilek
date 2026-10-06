@@ -18,6 +18,7 @@ import {
   MapPin,
   Star,
   Check,
+  X,
 } from 'lucide-react';
 import { buildManagerWhatsAppUrl, buildCustomerWhatsAppUrl } from '../services/notificationService';
 import { ShopLocationBadge } from './ShopLocationBadge';
@@ -74,6 +75,7 @@ export const CustomerBookingPortal: React.FC = () => {
 
   // Wizard Steps: 1: Service, 2: Barber, 3: Date & Slot, 4: Contact Info, 5: Success
   const [step, setStep] = useState<number>(1);
+  const [modalPhotoUrl, setModalPhotoUrl] = useState<string | null>(null);
 
   // Form State
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(['s3']); // Default Saç & Sakal
@@ -506,32 +508,56 @@ export const CustomerBookingPortal: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {barbers.map((barber) => {
                 const isSelected = selectedBarberId === barber.id;
+                const isInactive = !barber.active;
+
                 return (
                   <div
                     key={barber.id}
                     onClick={() => {
+                      if (isInactive) return; // Cannot select inactive barber
                       setSelectedBarberId(barber.id);
                       setSelectedTime(''); // Reset time slot
                     }}
-                    className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border relative ${
-                      isSelected
-                        ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/30'
-                        : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                    className={`rounded-2xl p-4 transition-all duration-200 border relative ${
+                      isInactive
+                        ? 'bg-slate-950/70 border-slate-900 opacity-50 grayscale cursor-not-allowed'
+                        : isSelected
+                        ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/30 cursor-pointer'
+                        : 'bg-slate-900/70 border-slate-800 hover:border-slate-700 hover:bg-slate-900 cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="relative">
+                      <div
+                        className="relative cursor-pointer group/avatar"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModalPhotoUrl(barber.avatar);
+                        }}
+                        title="Fotoğrafı büyütmek için tıklayın"
+                      >
                         <img
                           src={getAssetUrl(barber.avatar)}
                           alt={barber.name}
                           referrerPolicy="no-referrer"
-                          className="w-14 h-14 rounded-2xl object-cover border border-slate-700"
+                          className="w-14 h-14 rounded-2xl object-cover border border-slate-700 group-hover/avatar:border-amber-400 transition-colors"
                         />
-                        <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-950" />
+                        <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-slate-950 ${
+                          isInactive ? 'bg-slate-600' : 'bg-emerald-500'
+                        }`} />
+                        <div className="absolute inset-0 bg-slate-950/60 rounded-2xl opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center text-[10px] text-white font-semibold transition-opacity">
+                          Büyüt
+                        </div>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-white truncate">{barber.name}</h3>
+                        <h3 className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                          <span>{barber.name}</span>
+                          {isInactive && (
+                            <span className="text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/30">
+                              Kapalı
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-xs text-amber-400/90 truncate">{barber.title}</p>
                         <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-400 font-mono">
                           <span className="flex items-center gap-0.5 text-amber-400 font-semibold">
@@ -543,19 +569,35 @@ export const CustomerBookingPortal: React.FC = () => {
                         </div>
                       </div>
 
-                      <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
-                          isSelected ? 'border-amber-500 bg-amber-500 text-slate-950' : 'border-slate-700'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
+                      {!isInactive && (
+                        <div
+                          className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
+                            isSelected ? 'border-amber-500 bg-amber-500 text-slate-950' : 'border-slate-700'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="mt-3.5 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>Çalışma Saatleri:</span>
-                      <span className="text-slate-300 font-mono">{barber.workingHours.start} - {barber.workingHours.end}</span>
-                    </div>
+                    {isInactive && barber.inactiveNote && (
+                      <div className="mt-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-300 font-medium">
+                        ⚠️ <strong>İzin / Kapalı Notu:</strong> {barber.inactiveNote}
+                      </div>
+                    )}
+
+                    {isInactive && !barber.inactiveNote && (
+                      <div className="mt-3 text-[10px] text-slate-500 italic">
+                        Şu an online randevulara kapalıdır.
+                      </div>
+                    )}
+
+                    {!isInactive && (
+                      <div className="mt-3.5 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>Çalışma Saatleri:</span>
+                        <span className="text-slate-300 font-mono">{barber.workingHours.start} - {barber.workingHours.end}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -949,6 +991,37 @@ export const CustomerBookingPortal: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Profile Photo Zoom Lightbox Modal */}
+      {modalPhotoUrl && (
+        <div
+          onClick={() => setModalPhotoUrl(null)}
+          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-sm w-full bg-slate-900 border border-slate-800 p-4 rounded-3xl shadow-2xl text-center space-y-4"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h4 className="text-sm font-bold text-white">Personel Profil Fotoğrafı</h4>
+              <button
+                onClick={() => setModalPhotoUrl(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-2xl bg-slate-950 border border-slate-800 p-2">
+              <img
+                src={getAssetUrl(modalPhotoUrl)}
+                alt="Enlarged Staff"
+                referrerPolicy="no-referrer"
+                className="w-full h-auto max-h-[70vh] object-contain rounded-xl mx-auto shadow-xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

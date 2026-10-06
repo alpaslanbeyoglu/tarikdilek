@@ -17,6 +17,7 @@ export interface Barber {
   rating: number;
   experienceYears: number;
   active: boolean;
+  inactiveNote?: string; // Note when staff is deactivated/closed (shown to customers)
   pin?: string; // Individual staff PIN
   bio?: string;
   servicesOffered: string[]; // Service IDs

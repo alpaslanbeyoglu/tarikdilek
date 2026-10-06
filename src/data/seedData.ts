@@ -129,10 +129,10 @@ export const INITIAL_BARBERS: Barber[] = [
     phone: '0531 660 52 30',
     avatar: './images/barber_master_ahmet_1791041628892.jpg',
     rating: 5.0,
-    experienceYears: 15,
+    experienceYears: 20,
     active: true,
     pin: '1461',
-    bio: '15 yıllık berberlik ve saç sanatı tecrübesi, kişiye özel kafa yapısı ve saç analizi.',
+    bio: '20 yıllık berberlik ve saç sanatı tecrübesi, kişiye özel kafa yapısı ve saç analizi.',
     servicesOffered: ALL_SERVICE_IDS,
     workingHours: {
       start: '09:00',
