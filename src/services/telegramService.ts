@@ -88,10 +88,10 @@ export async function sendTelegramNewAppointmentNotification(
     const cancelUrl = `${cleanUrl}/?action=cancel&aptId=${encodeURIComponent(data.appointmentId)}`;
     const cleanPhone = (data.customerPhone || '').replace(/\D/g, '');
 
-    const inlineKeyboard: Array<Array<{ text: string; url: string }>> = [
+    const inlineKeyboard: Array<Array<{ text: string; web_app?: { url: string }; url?: string }>> = [
       [
-        { text: '✅ Randevuyu Onayla', url: confirmUrl },
-        { text: '❌ İptal Et', url: cancelUrl },
+        { text: '✅ Randevuyu Onayla', web_app: { url: confirmUrl } },
+        { text: '❌ İptal Et', web_app: { url: cancelUrl } },
       ],
     ];
 

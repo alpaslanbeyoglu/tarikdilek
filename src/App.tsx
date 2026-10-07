@@ -55,20 +55,46 @@ function MainApp() {
         updateAppointmentStatus(aptId, 'confirmed');
         setTelegramActionNotice({
           type: 'success',
-          message: '✓ Randevu Telegram Üzerinden Başarıyla Onaylandı!',
-          details: 'Randevu durumu "Onaylandı" olarak güncellendi ve takvime işlendi.',
+          message: '✓ Randevu Başarıyla Onaylandı!',
+          details: 'Randevu durumu "Onaylandı" olarak güncellendi ve takvime kaydedildi.',
         });
         setActiveMode('manager');
         setCurrentTab('calendar');
+        if ((window as any).Telegram?.WebApp) {
+          try {
+            const tg = (window as any).Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.HapticFeedback?.notificationOccurred?.('success');
+            setTimeout(() => {
+              tg.close();
+            }, 2200);
+          } catch (e) {
+            console.warn('Telegram WebApp close error:', e);
+          }
+        }
       } else if (action === 'cancel') {
         updateAppointmentStatus(aptId, 'cancelled');
         setTelegramActionNotice({
           type: 'error',
-          message: 'Randevu Telegram Üzerinden İptal Edildi.',
+          message: 'Randevu İptal Edildi.',
           details: 'Randevu iptal olarak işaretlendi.',
         });
         setActiveMode('manager');
         setCurrentTab('calendar');
+        if ((window as any).Telegram?.WebApp) {
+          try {
+            const tg = (window as any).Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.HapticFeedback?.notificationOccurred?.('warning');
+            setTimeout(() => {
+              tg.close();
+            }, 2200);
+          } catch (e) {
+            console.warn('Telegram WebApp close error:', e);
+          }
+        }
       }
 
       // Remove query parameters from URL without reloading
