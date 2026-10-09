@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     appointments,
     currentUser,
     currentUserRole,
+    settings,
     logout,
     refreshAppointments,
     isLoading,
@@ -76,13 +77,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Brand & User Role Badge */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-            <Scissors className="h-5 w-5 -rotate-45" />
+          <div
+            onClick={() => !isStaff && setCurrentTab('settings')}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-slate-900 border border-amber-500/40 text-amber-400 shrink-0 shadow-md ${
+              !isStaff ? 'cursor-pointer hover:border-amber-400 transition-colors' : ''
+            }`}
+            title={!isStaff ? 'Ayarlar & Logo Yönetimi' : undefined}
+          >
+            <img
+              src={settings?.customAppIcon || '/apple-touch-icon.png'}
+              alt={settings?.shopName || 'Tarık Dilek'}
+              className="h-full w-full object-cover rounded-xl"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            <Scissors className="h-5 w-5 -rotate-45 absolute -z-10 text-amber-400/50" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-display text-base sm:text-lg font-bold tracking-tight text-white">
-                Tarık Dilek
+                {settings?.shopName || 'Tarık Dilek'}
               </span>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                 isStaff

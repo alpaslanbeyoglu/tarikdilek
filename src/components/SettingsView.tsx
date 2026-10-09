@@ -27,6 +27,7 @@ import {
   Clock,
   Sliders,
   CheckCircle,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { SALON_THEMES, ThemeId } from '../utils/themeHelper';
 import { SafariNotificationGuide } from './SafariNotificationGuide';
@@ -69,6 +70,11 @@ export const SettingsView: React.FC = () => {
   const [testTgStatus, setTestTgStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  const [iconUploadFeedback, setIconUploadFeedback] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   // Google Drive Sync State
   const [googleUserEmail, setGoogleUserEmail] = useState<string | null>(null);
@@ -299,6 +305,75 @@ export const SettingsView: React.FC = () => {
     reader.readAsText(file);
   };
 
+  const handleCustomIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setIconUploadFeedback({
+        type: 'error',
+        text: 'Lütfen geçerli bir görsel dosyası seçin (PNG, JPG, WebP).',
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 512;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, 512, 512);
+
+            const minDim = Math.min(img.width, img.height);
+            const sx = (img.width - minDim) / 2;
+            const sy = (img.height - minDim) / 2;
+            ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, 512, 512);
+
+            const processedDataUrl = canvas.toDataURL('image/png', 0.95);
+            updateSettings({ customAppIcon: processedDataUrl });
+            setIconUploadFeedback({
+              type: 'success',
+              text: '✓ Yeni uygulama ikonu kaydedildi! Ana ekran ve tarayıcı simgesi güncellendi.',
+            });
+            setTimeout(() => setIconUploadFeedback(null), 5000);
+          }
+        } catch {
+          updateSettings({ customAppIcon: dataUrl });
+          setIconUploadFeedback({
+            type: 'success',
+            text: '✓ Yeni uygulama ikonu kaydedildi!',
+          });
+          setTimeout(() => setIconUploadFeedback(null), 5000);
+        }
+      };
+      img.onerror = () => {
+        setIconUploadFeedback({
+          type: 'error',
+          text: 'Görsel işlenirken bir sorun oluştu.',
+        });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDownloadCurrentIcon = () => {
+    const current = settings.customAppIcon || '/apple-touch-icon.png';
+    const a = document.createElement('a');
+    a.href = current;
+    a.download = 'tarik_dilek_app_icon.png';
+    a.click();
+  };
+
   if (isStaff) {
     return (
       <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center max-w-xl mx-auto space-y-4 my-12 shadow-2xl animate-in fade-in">
@@ -337,8 +412,8 @@ export const SettingsView: React.FC = () => {
     },
     {
       id: 'appearance' as const,
-      label: 'Görünüm & Tema',
-      desc: '4 Renk Paleti',
+      label: 'Logo & Görünüm',
+      desc: 'Sol Üst Logo, İkon & Renk',
       icon: Palette,
     },
     {
@@ -898,6 +973,261 @@ export const SettingsView: React.FC = () => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* UYGULAMA İKONU & ANA EKRAN LOGO YÖNETİMİ */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 space-y-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Uygulama İkonu & Ana Ekran Logosu</span>
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 font-semibold">
+                      iOS & Android & Favicon
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    iPhone Safari "Ana Ekrana Ekle" menüsünde, telefon ana ekranında ve tarayıcı sekmesinde görünen ikon
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={iconInputRef}
+                  onChange={handleCustomIconUpload}
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => iconInputRef.current?.click()}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Kendi Logonuzu Yükleyin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadCurrentIcon}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs border border-slate-700 transition-colors flex items-center gap-1.5"
+                  title="Mevcut ikonu PNG olarak indir"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-300" />
+                  <span className="hidden sm:inline">İndir</span>
+                </button>
+              </div>
+            </div>
+
+            {iconUploadFeedback && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center gap-2 animate-in fade-in ${
+                  iconUploadFeedback.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                }`}
+              >
+                {iconUploadFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{iconUploadFeedback.text}</span>
+              </div>
+            )}
+
+            {/* Live Visual Mockup & Information */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* iPhone iOS Springboard Mockup & Sol Üst Header Önizlemesi */}
+              <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative overflow-hidden group">
+                {/* 1. iOS Ana Ekran İkonu */}
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 font-mono">
+                    iPhone "Ana Ekrana Ekle" İkonu
+                  </div>
+                  <div className="relative my-1">
+                    <div className="w-16 h-16 rounded-[22%] overflow-hidden border border-amber-500/30 shadow-2xl bg-slate-900 ring-2 ring-slate-800 transition-transform duration-300 group-hover:scale-105">
+                      <img
+                        src={settings.customAppIcon || '/apple-touch-icon.png'}
+                        alt="Uygulama İkonu"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-white tracking-wide">Tarık Dilek</div>
+                </div>
+
+                {/* 2. Sol Üst Menü / Header Önizlemesi */}
+                <div className="pt-3 border-t border-slate-800/80">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 font-mono text-center mb-2">
+                    Sol Üst Menü / Header Görünümü
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex items-center gap-2.5 shadow-inner">
+                    <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-900 border border-amber-500/40 shrink-0 flex items-center justify-center">
+                      <img
+                        src={settings.customAppIcon || '/apple-touch-icon.png'}
+                        alt="Logo"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">Tarık Dilek</div>
+                      <div className="text-[10px] text-amber-400 font-medium">Sol Üst İkon</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] w-full">
+                  <Check className="w-3 h-3 text-amber-400" />
+                  <span>Şu An Aktif Olan Logo</span>
+                </div>
+              </div>
+
+              {/* Ready Presets Grid */}
+              <div className="md:col-span-2 bg-slate-950/50 border border-slate-800/80 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Hazır Özel Berber Logolarından Seçin</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-400">Tek tıkla değiştirin</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Preset 1: Luxury Gold Monogram TD */}
+                  <div
+                    onClick={() => {
+                      updateSettings({ customAppIcon: '/apple-touch-icon.png' });
+                      setIconUploadFeedback({
+                        type: 'success',
+                        text: '✓ Lüks Altın TD Monogramı aktif edildi!',
+                      });
+                      setTimeout(() => setIconUploadFeedback(null), 3500);
+                    }}
+                    className={`cursor-pointer p-2.5 rounded-xl border transition-all flex items-center gap-3 ${
+                      !settings.customAppIcon || settings.customAppIcon === '/apple-touch-icon.png'
+                        ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/40'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-[20%] overflow-hidden border border-amber-500/30 bg-slate-950 shrink-0">
+                      <img src="/apple-touch-icon.png" alt="Lüks TD" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>Lüks Altın TD</span>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.2 rounded font-semibold">Önerilen</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 truncate">Altın monogram & makas motifi</p>
+                    </div>
+                  </div>
+
+                  {/* Preset 2: Tarık Dilek Fotoğrafı */}
+                  <div
+                    onClick={() => {
+                      updateSettings({ customAppIcon: '/images/tarik_dilek_ig_avatar_1791055932043.jpg' });
+                      setIconUploadFeedback({
+                        type: 'success',
+                        text: '✓ Tarık Dilek Profil Fotoğrafı aktif edildi!',
+                      });
+                      setTimeout(() => setIconUploadFeedback(null), 3500);
+                    }}
+                    className={`cursor-pointer p-2.5 rounded-xl border transition-all flex items-center gap-3 ${
+                      settings.customAppIcon === '/images/tarik_dilek_ig_avatar_1791055932043.jpg'
+                        ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/40'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-[20%] overflow-hidden border border-slate-700 bg-slate-950 shrink-0">
+                      <img src="/images/tarik_dilek_ig_avatar_1791055932043.jpg" alt="Tarık Dilek Avatar" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white">Tarık Dilek Fotoğrafı</div>
+                      <p className="text-[11px] text-slate-400 truncate">Kişisel marka & salon kurucusu</p>
+                    </div>
+                  </div>
+
+                  {/* Preset 3: Modern Fade Model */}
+                  <div
+                    onClick={() => {
+                      updateSettings({ customAppIcon: '/images/barber_fade_can_1791041648901.jpg' });
+                      setIconUploadFeedback({
+                        type: 'success',
+                        text: '✓ Modern Model Kesim görseli aktif edildi!',
+                      });
+                      setTimeout(() => setIconUploadFeedback(null), 3500);
+                    }}
+                    className={`cursor-pointer p-2.5 rounded-xl border transition-all flex items-center gap-3 ${
+                      settings.customAppIcon === '/images/barber_fade_can_1791041648901.jpg'
+                        ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/40'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-[20%] overflow-hidden border border-slate-700 bg-slate-950 shrink-0">
+                      <img src="/images/barber_fade_can_1791041648901.jpg" alt="Fade Stili" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white">Kuaför Kesim Tasarımı</div>
+                      <p className="text-[11px] text-slate-400 truncate">Profesyonel fade saç modeli</p>
+                    </div>
+                  </div>
+
+                  {/* Preset 4: Salon Atmosferi */}
+                  <div
+                    onClick={() => {
+                      updateSettings({ customAppIcon: '/images/barbershop_hero_atmosphere_1791041617667.jpg' });
+                      setIconUploadFeedback({
+                        type: 'success',
+                        text: '✓ Salon Atmosferi görseli aktif edildi!',
+                      });
+                      setTimeout(() => setIconUploadFeedback(null), 3500);
+                    }}
+                    className={`cursor-pointer p-2.5 rounded-xl border transition-all flex items-center gap-3 ${
+                      settings.customAppIcon === '/images/barbershop_hero_atmosphere_1791041617667.jpg'
+                        ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/40'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-[20%] overflow-hidden border border-slate-700 bg-slate-950 shrink-0">
+                      <img src="/images/barbershop_hero_atmosphere_1791041617667.jpg" alt="Salon Atmosferi" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white">Lüks Salon Atmosferi</div>
+                      <p className="text-[11px] text-slate-400 truncate">Işıklı kuaför koltuğu & ayna</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* iOS Safari Guide Box */}
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 space-y-2">
+              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-amber-400" />
+                <span>iPhone'da İkon Değişikliğini Görme Adımları (Safari)</span>
+              </h4>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Safari, ana ekrana eklenen simgeleri önbelleğinde (cache) saklar. İkonu değiştirdikten sonra telefonunuzda güncel halini görmek için:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                  <span className="font-bold text-amber-400 block mb-0.5">1. Eski İkonu Kaldırın</span>
+                  <span className="text-slate-400">Telefonunuzun ana ekranında eski simge varsa basılı tutup "Sil" deyin.</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                  <span className="font-bold text-amber-400 block mb-0.5">2. Sayfayı Yenileyin</span>
+                  <span className="text-slate-400">Safari'de web sitenizi açıp yenile (refresh) butonuna basarak önbelleği tazeleyin.</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                  <span className="font-bold text-amber-400 block mb-0.5">3. Ana Ekrana Ekleyin</span>
+                  <span className="text-slate-400">Paylaş simgesi → "Ana Ekrana Ekle" dediğinizde yeni logonuz sol üstte görünecektir.</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

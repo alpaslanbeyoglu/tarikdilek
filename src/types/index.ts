@@ -118,4 +118,5 @@ export interface BusinessSettings {
   themeId?: 'gold' | 'emerald' | 'sapphire' | 'light';
   telegramBotToken?: string;
   telegramChatId?: string;
+  customAppIcon?: string;
 }

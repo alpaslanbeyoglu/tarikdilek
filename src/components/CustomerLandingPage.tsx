@@ -64,15 +64,23 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
           {/* Brand */}
           <div
             onClick={() => setActiveTab('booking')}
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <Scissors className="h-5 w-5 -rotate-45" />
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden bg-slate-900 border border-amber-500/40 text-amber-400 shrink-0 shadow-md group-hover:border-amber-400 transition-colors">
+              <img
+                src={settings?.customAppIcon || '/apple-touch-icon.png'}
+                alt={settings?.shopName || 'Tarık Dilek'}
+                className="h-full w-full object-cover rounded-xl"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <Scissors className="h-5 w-5 -rotate-45 absolute -z-10 text-amber-400/50" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-display text-lg font-bold tracking-tight text-white">
-                  Tarık Dilek
+                <span className="font-display text-lg font-bold tracking-tight text-white group-hover:text-amber-400 transition-colors">
+                  {settings?.shopName || 'Tarık Dilek'}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
                   Göktürk

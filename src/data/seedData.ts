@@ -14,6 +14,7 @@ export const INITIAL_SETTINGS: BusinessSettings = {
   soundEnabled: true,
   pushEnabled: true,
   slotIntervalMinutes: 30,
+  customAppIcon: '/apple-touch-icon.png',
 };
 
 export const INITIAL_SERVICES: Service[] = [

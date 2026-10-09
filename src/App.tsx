@@ -30,6 +30,7 @@ function MainApp() {
     updateAppointmentStatus,
     currentUserRole,
     logout,
+    settings,
   } = useBarber();
   const [currentTab, setCurrentTab] = useState<ManagerTabType>('calendar');
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
@@ -42,6 +43,19 @@ function MainApp() {
   } | null>(null);
 
   const isStaff = currentUserRole === 'staff';
+
+  // Dynamic App Icon / Apple-Touch-Icon / Favicon Updater
+  useEffect(() => {
+    const iconUrl = settings?.customAppIcon || '/apple-touch-icon.png';
+    const appleIcons = document.querySelectorAll<HTMLLinkElement>("link[rel*='apple-touch-icon']");
+    appleIcons.forEach((el) => {
+      el.href = iconUrl;
+    });
+    const favicons = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+    favicons.forEach((el) => {
+      el.href = iconUrl;
+    });
+  }, [settings?.customAppIcon]);
 
   // Listen for direct Telegram action buttons (?action=confirm&aptId=... or ?action=cancel&aptId=...)
   useEffect(() => {
