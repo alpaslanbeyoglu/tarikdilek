@@ -41,17 +41,21 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
   const { settings, services, barbers, setActiveMode, syncError, clearSyncError } = useBarber();
   const [activeTab, setActiveTab] = useState<CustomerTabType>('booking');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [preselectedServiceId, setPreselectedServiceId] = useState<string | undefined>(undefined);
+  const [preselectedBarberId, setPreselectedBarberId] = useState<string | undefined>(undefined);
 
   const whatsappUrl = `https://wa.me/905316605230?text=${encodeURIComponent(
     'Merhaba Tarık Bey, Göktürk salonunuz için randevu ve bilgi almak istiyorum.'
   )}`;
 
   const handleSelectServiceForBooking = (serviceId: string) => {
+    setPreselectedServiceId(serviceId);
     setActiveTab('booking');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectBarberForBooking = (barberId: string) => {
+    setPreselectedBarberId(barberId);
     setActiveTab('booking');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -253,7 +257,10 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
 
             {/* Direct Booking Wizard */}
             <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6">
-              <CustomerBookingPortal />
+              <CustomerBookingPortal
+                initialServiceId={preselectedServiceId}
+                initialBarberId={preselectedBarberId}
+              />
             </div>
 
             {/* Quick Contact Box */}
