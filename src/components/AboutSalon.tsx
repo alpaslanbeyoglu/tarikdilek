@@ -49,7 +49,6 @@ export const AboutSalon: React.FC = () => {
                   <div>
                     <h4 className="text-sm font-bold text-white">Tarık Dilek</h4>
                     <p className="text-xs text-amber-400">Kurucu & Baş Berber</p>
-                    <span className="text-[11px] text-slate-400 font-mono">15 Yıllık Ustalık Deneyimi</span>
                   </div>
                 </div>
 

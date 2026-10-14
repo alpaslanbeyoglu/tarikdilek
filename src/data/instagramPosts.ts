@@ -63,7 +63,7 @@ export const INSTAGRAM_POSTS: InstagramPost[] = [
   {
     id: 'ig-6',
     imageUrl: '/src/assets/images/barber_master_ahmet_1791041628892.jpg',
-    caption: '15 yıllık zanaat, titizlik ve sürekli yenilenen modern teknikler. Kurucumuz Tarık Dilek ile saç ve sakalınız emin ellerde.',
+    caption: 'Köklü zanaat, titizlik ve sürekli yenilenen modern teknikler. Kurucumuz Tarık Dilek ile saç ve sakalınız emin ellerde.',
     likes: 480,
     commentsCount: 34,
     date: '2 hafta önce',

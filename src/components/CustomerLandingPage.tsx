@@ -26,7 +26,6 @@ import {
   Instagram,
   BookOpen,
   Info,
-  Check,
   Images,
 } from 'lucide-react';
 import { SHOP_COORDINATES } from '../utils/location';
@@ -232,26 +231,6 @@ export const CustomerLandingPage: React.FC<CustomerLandingPageProps> = ({ onOpen
                     Erkek Kuaförü & Saç Tasarım
                   </span>
                 </h1>
-
-                <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-                  Sıra beklemeden, dilediğiniz gün ve saatte usta stilistlerimizden anında randevunuzu oluşturun.
-                </p>
-
-                {/* Quick Feature Badges */}
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-300">
-                  <span className="flex items-center gap-1 bg-slate-900/80 border border-slate-800 px-2.5 py-1 rounded-full">
-                    <Check className="w-3 h-3 text-emerald-400" />
-                    <span>Anında Onay</span>
-                  </span>
-                  <span className="flex items-center gap-1 bg-slate-900/80 border border-slate-800 px-2.5 py-1 rounded-full">
-                    <Check className="w-3 h-3 text-emerald-400" />
-                    <span>WhatsApp Bildirimi</span>
-                  </span>
-                  <span className="flex items-center gap-1 bg-slate-900/80 border border-slate-800 px-2.5 py-1 rounded-full">
-                    <Check className="w-3 h-3 text-emerald-400" />
-                    <span>15 Yıllık Deneyim</span>
-                  </span>
-                </div>
               </div>
             </section>
 
